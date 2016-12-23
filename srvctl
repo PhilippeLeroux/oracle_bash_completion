@@ -1,6 +1,23 @@
 # vim: ts=4:sw=4
 
-#srvctl <command> <object> [<options>]
+# bash completion support for srvctl
+#
+# Copyright (C) 2016 Philippe Leroux <philippe.lrx@gmail.com>
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+#	=================================================================================
+#	srvctl <command> <object> [<options>]
 
 #	Pour mémo :
 #		COMP_WORDS	tableau contenant toute la commande.
@@ -9,33 +26,58 @@
 
 #	commande faites :
 #	status
-#		service	: srvctl status service -db PLUTOT -service pdbPLUTOT01_oci [plus de complétion]
-return_db_services()
+#		service	: srvctl status service -db <dbname> -service <srvname> [plus de complétion]
+#		service	: srvctl status database -db <dbname> -service <srvname> <options>
+#		service	: srvctl status asm <options>
+#		service	: srvctl status diskgroup -diskgroup <dgname> <options>
+#	=================================================================================
+
+#	commande : srvctl status service -db <dbname> -service [TAB]
+#	return all existing services
+function return_db_services
 {
+	# make cmd : srvctl status service -db <dbname>
 	typeset	cmd
 	for i in $( seq 0 $(( COMP_CWORD - 2 )) )
 	do
 		cmd="$cmd ${COMP_WORDS[i]}"
 	done
 
-	typeset service_list
+	#	Load all services :
+	typeset -a service_list
 	while read l_service service_name rem
 	do
 		service_list+=( $service_name )
 	done<<<"$(eval $cmd)"
+
+	#	return services :
 	COMPREPLY=( $(compgen -W "${service_list[*]}" -- ${cur_word}) )
 }
 
-_srvctl_complete()
+# srvctl status diskgroup -diskgroup [TAB]
+# return diskgroup names.
+function return_diskgroup
 {
-	typeset cur_word prev_word
-	cur_word="${COMP_WORDS[COMP_CWORD]}"
-	prev_word="${COMP_WORDS[COMP_CWORD-1]}"
+	#	Load all diskgroup names.
+	typeset -a diskgroup_list
+	while IFS='.' read l_ora diskname l_dg
+	do
+		diskgroup_list+=( $diskname )
+	done<<<"$(crsctl stat res  | grep -E "ora.*.dg" | sed "s/NAME=\(.*\)/\1/g")"
+
+	#	return diskgroup names.
+	COMPREPLY=( $(compgen -W "${diskgroup_list[*]}" -- ${cur_word}) )
+}
+
+function srvctl_complete
+{
+	typeset cur_word="${COMP_WORDS[COMP_CWORD]}"
+	typeset prev_word="${COMP_WORDS[COMP_CWORD-1]}"
 
 	typeset commands="enable disable start stop status add remove modify update getenv setenv unsetenv config upgrade downgrade"
 
 	if [[ "$commands" == *"$prev_word"* ]]
-	then	# srvctl ....
+	then	# srvctl <command> [TAB]
 		typeset objects="database service asm diskgroup listener home ons"
 		COMPREPLY=( $(compgen -W "${objects}" -- ${cur_word}) )
 	else
@@ -44,31 +86,55 @@ _srvctl_complete()
 				COMPREPLY=( $(compgen -W "${commands}" -- ${cur_word}) )
 				;;
 
-			database)	# srvctl status database
+			database)	# srvctl status database [TAB]
 				COMPREPLY=( $(compgen -W "-db -thisversion -thishome" -- ${cur_word}) )
 				;;
 
-			service)	# srvctl status service
+			service)	# srvctl status service [TAB]
 				COMPREPLY=( $(compgen -W "-db" -- ${cur_word}) )
 				;;
 
-			-db)	# srvctl status <object> -db
-				local all_dbs=$(srvctl config database | xargs)
+			asm)	# srvctl status asm [TAB]
+				COMPREPLY=( $(compgen -W "-all -detail -verbose -help" -- ${cur_word}) )
+				;;
+
+			diskgroup)	# srvctl status diskgroup [TAB]
+				COMPREPLY=( $(compgen -W "-diskgroup -detail -verbose -help" -- ${cur_word}) )
+				;;
+
+			-diskgroup)	# srvctl status diskgroup -diskgroup [TAB]
+				return_diskgroup
+				;;
+
+			-db)	# srvctl status <object> -db [TAB]
+				typeset all_dbs=$(srvctl config database | xargs)
 				COMPREPLY=( $(compgen -W "${all_dbs}" -- ${cur_word}) )
 				;;
 
-			-service)
+			-service) # srvctl status service -db <name> -service [TAB]
 				return_db_services
 				;;
 
 			*)
 				case "${COMP_WORDS[COMP_CWORDS-4]}" in
-					service)	# srvctl status service -db <name>
+					service)	# srvctl status service -db <name>  [TAB]
 						COMPREPLY=( $(compgen -W "-service -force -verbose -help" -- ${cur_word}) )
 						;;
 
+					database)	# srvctl status database -db <name>  [TAB]
+						COMPREPLY=( $(compgen -W "-force -verbose -help" -- ${cur_word}) )
+						;;
+
 					*)
-						COMPREPLY=(  )
+						case "${COMP_WORDS[COMP_CWORDS-3]}" in
+							-diskgroup)	# srvctl status diskgroup -diskgroup <diskgroup> [TAB]
+								COMPREPLY=( "-detail" )
+								;;
+						
+							*)
+								COMPREPLY=(  )
+								;;
+						esac
 						;;
 				esac
 				;;
@@ -77,5 +143,5 @@ _srvctl_complete()
 	return 0
 }
 
-# Register _srvctl_complete to provide completion for the following commands
-complete -F _srvctl_complete srvctl
+# Register srvctl_complete to provide completion for the following commands
+complete -F srvctl_complete srvctl
