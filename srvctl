@@ -28,16 +28,16 @@ return_db_services()
 
 _srvctl_complete()
 {
-    typeset cur_word prev_word
-    cur_word="${COMP_WORDS[COMP_CWORD]}"
-    prev_word="${COMP_WORDS[COMP_CWORD-1]}"
+	typeset cur_word prev_word
+	cur_word="${COMP_WORDS[COMP_CWORD]}"
+	prev_word="${COMP_WORDS[COMP_CWORD-1]}"
 
-    typeset commands="enable disable start stop status add remove modify update getenv setenv unsetenv config upgrade downgrade"
+	typeset commands="enable disable start stop status add remove modify update getenv setenv unsetenv config upgrade downgrade"
 
 	if [[ "$commands" == *"$prev_word"* ]]
 	then	# srvctl ....
 		typeset objects="database service asm diskgroup listener home ons"
-        COMPREPLY=( $(compgen -W "${objects}" -- ${cur_word}) )
+		COMPREPLY=( $(compgen -W "${objects}" -- ${cur_word}) )
 	else
 		case "$prev_word" in
 			srvctl)
@@ -74,7 +74,7 @@ _srvctl_complete()
 				;;
 		esac
 	fi
-    return 0
+	return 0
 }
 
 # Register _srvctl_complete to provide completion for the following commands
