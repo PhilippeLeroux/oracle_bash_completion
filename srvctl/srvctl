@@ -1,0 +1,79 @@
+#srvctl <command> <object> [<options>]
+
+#	Pour mémo :
+#		COMP_WORDS	tableau contenant toute la commande.
+#		COMP_CWORD	nombre d'élément dans COMP_WORDS
+#		COMPREPLY	tableau à retourner.
+
+#	commande faites :
+#	status
+#		service	: srvctl status service -db PLUTOT -service pdbPLUTOT01_oci [plus de complétion]
+return_db_services()
+{
+	typeset	cmd
+	for i in $( seq 0 $(( COMP_CWORD - 2 )) )
+	do
+		cmd="$cmd ${COMP_WORDS[i]}"
+	done
+
+	typeset service_list
+	while read l_service service_name rem
+	do
+		service_list+=( $service_name )
+	done<<<"$(eval $cmd)"
+	COMPREPLY=( $(compgen -W "${service_list[*]}" -- ${cur_word}) )
+}
+
+_srvctl_complete()
+{
+    typeset cur_word prev_word
+    cur_word="${COMP_WORDS[COMP_CWORD]}"
+    prev_word="${COMP_WORDS[COMP_CWORD-1]}"
+
+    typeset commands="enable disable start stop status add remove modify update getenv setenv unsetenv config upgrade downgrade"
+
+	if [[ "$commands" == *"$prev_word"* ]]
+	then	# srvctl ....
+		typeset objects="database service asm diskgroup listener home ons"
+        COMPREPLY=( $(compgen -W "${objects}" -- ${cur_word}) )
+	else
+		case "$prev_word" in
+			srvctl)
+				COMPREPLY=( $(compgen -W "${commands}" -- ${cur_word}) )
+				;;
+
+			database)	# srvctl status database
+				COMPREPLY=( $(compgen -W "-db -thisversion -thishome" -- ${cur_word}) )
+				;;
+
+			service)	# srvctl status service
+				COMPREPLY=( $(compgen -W "-db" -- ${cur_word}) )
+				;;
+
+			-db)	# srvctl status <object> -db
+				local all_dbs=$(srvctl config database | xargs)
+				COMPREPLY=( $(compgen -W "${all_dbs}" -- ${cur_word}) )
+				;;
+
+			-service)
+				return_db_services
+				;;
+
+			*)
+				case "${COMP_WORDS[COMP_CWORDS-4]}" in
+					service)	# srvctl status service -db <name>
+						COMPREPLY=( $(compgen -W "-service -force -verbose -help" -- ${cur_word}) )
+						;;
+
+					*)
+						COMPREPLY=(  )
+						;;
+				esac
+				;;
+		esac
+	fi
+    return 0
+}
+
+# Register _srvctl_complete to provide completion for the following commands
+complete -F _srvctl_complete srvctl
