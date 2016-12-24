@@ -1,18 +1,17 @@
-# vim: ts=4:sw=4
+# bash completion support for srvctl 12cR1
+# vim: ts=4:sw=4:filetype=sh
 
-# bash completion support for srvctl
-#
 # Copyright (C) 2016 Philippe Leroux <philippe.lrx@gmail.com>
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
@@ -20,21 +19,28 @@
 #	srvctl <command> <object> [<options>]
 
 #	Pour mémo :
-#		COMP_WORDS	tableau contenant toute la commande.
-#		COMP_CWORD	nombre d'élément dans COMP_WORDS
-#		COMPREPLY	tableau à retourner.
+#		COMP_WORDS	is an array of words in the current command line.
+#		COMP_CWORD	is the index of the current word in the command line.
+#		COMPREPLY	is a list of replies.
 
-#	commande faites :
+#	Done :
 #	status
-#		service	: srvctl status service -db <dbname> -service <srvname> [plus de complétion]
-#		service	: srvctl status database -db <dbname> -service <srvname> <options>
-#		service	: srvctl status asm <options>
-#		service	: srvctl status diskgroup -diskgroup <dgname> <options>
+#		srvctl status service -db <dbname> -service <srvname>
+#		srvctl status database <-db <dbname>|-thishome|-thisversion <options>
+#		srvctl status asm <options>
+#		srvctl status diskgroup -diskgroup <dgname> <options>
+#		srvctl status listener -listener <name>
+#		srvctl status home -oraclehome <OH> -statefile
+#		srvctl status ons
 #	=================================================================================
 
-#	commande : srvctl status service -db <dbname> -service [TAB]
-#	return all existing services
-function return_db_services
+function make_reply
+{
+	COMPREPLY=( $(compgen -W "$@" -- ${cur_word}) )
+}
+
+#	srvctl status service -db <dbname> -service [TAB]
+function make_service_list
 {
 	# make cmd : srvctl status service -db <dbname>
 	typeset	cmd
@@ -42,31 +48,33 @@ function return_db_services
 	do
 		cmd="$cmd ${COMP_WORDS[i]}"
 	done
+	cmd="$cmd | sed 's/Service \(.*\) is running/\1/g' | xargs"
 
-	#	Load all services :
-	typeset -a service_list
-	while read l_service service_name rem
-	do
-		service_list+=( $service_name )
-	done<<<"$(eval $cmd)"
-
-	#	return services :
-	COMPREPLY=( $(compgen -W "${service_list[*]}" -- ${cur_word}) )
+	make_reply "$(eval $cmd)"
 }
 
 # srvctl status diskgroup -diskgroup [TAB]
-# return diskgroup names.
-function return_diskgroup
+function make_diskgroup_list
 {
-	#	Load all diskgroup names.
-	typeset -a diskgroup_list
-	while IFS='.' read l_ora diskname l_dg
-	do
-		diskgroup_list+=( $diskname )
-	done<<<"$(crsctl stat res  | grep -E "ora.*.dg" | sed "s/NAME=\(.*\)/\1/g")"
+	make_reply	"$(crsctl stat res		|\
+					grep -E "ora.*.dg"	|\
+					sed "s/NAME=ora.\(.*\).dg/\1/g" | xargs)"
+}
 
-	#	return diskgroup names.
-	COMPREPLY=( $(compgen -W "${diskgroup_list[*]}" -- ${cur_word}) )
+# srvctl status listener -listener [TAB]
+function make_listener_list
+{
+	make_reply	"$(crsctl stat res			|\
+					grep -E "ora.*.lsnr"	|\
+					sed "s/NAME=ora.\(.*\).lsnr/\1/g" | xargs)"
+}
+
+# srvctl status home -oraclehome [TAB]
+function make_oracle_home_list
+{
+	make_reply	"$(cat /etc/oratab			|\
+					grep -E "^(\+|[A-Z])"	|\
+					sed "s/.*:\(.*\):[Y|N].*/\1/g" | xargs)"
 }
 
 function srvctl_complete
@@ -78,51 +86,69 @@ function srvctl_complete
 
 	if [[ "$commands" == *"$prev_word"* ]]
 	then	# srvctl <command> [TAB]
-		typeset objects="database service asm diskgroup listener home ons"
-		COMPREPLY=( $(compgen -W "${objects}" -- ${cur_word}) )
+		make_reply "database service asm diskgroup listener home ons"
 	else
 		case "$prev_word" in
 			srvctl)
-				COMPREPLY=( $(compgen -W "${commands}" -- ${cur_word}) )
+				make_reply "${commands}"
 				;;
 
 			database)	# srvctl status database [TAB]
-				COMPREPLY=( $(compgen -W "-db -thisversion -thishome" -- ${cur_word}) )
+				make_reply "-database -thisversion -thishome"
 				;;
 
 			service)	# srvctl status service [TAB]
-				COMPREPLY=( $(compgen -W "-db" -- ${cur_word}) )
+				COMPREPLY=( "-database" )
 				;;
 
 			asm)	# srvctl status asm [TAB]
-				COMPREPLY=( $(compgen -W "-all -detail -verbose -help" -- ${cur_word}) )
+				make_reply "-detail -verbose"
 				;;
 
 			diskgroup)	# srvctl status diskgroup [TAB]
-				COMPREPLY=( $(compgen -W "-diskgroup -detail -verbose -help" -- ${cur_word}) )
+				make_reply "-diskgroup -detail -verbose"
+				;;
+
+			listener)	# srvctl status listener [TAB]
+				make_reply "-listener"
+				;;
+
+			home)	# srvctl status home [TAB]
+				COMPREPLY=( "-oraclehome" )
+				;;
+
+			-thisversion|-thishome) # srvctl status database -thisversion|-thishome
+				COMPREPLY=( "-verbose" )
+				;;
+
+			-listener)	# srvctl status listener -listener [TAB]
+				make_listener_list
 				;;
 
 			-diskgroup)	# srvctl status diskgroup -diskgroup [TAB]
-				return_diskgroup
+				make_diskgroup_list
 				;;
 
-			-db)	# srvctl status <object> -db [TAB]
-				typeset all_dbs=$(srvctl config database | xargs)
-				COMPREPLY=( $(compgen -W "${all_dbs}" -- ${cur_word}) )
+			-database|-db)	# srvctl status <object> -db [TAB]
+				make_reply "$(srvctl config database | xargs)"
 				;;
 
-			-service) # srvctl status service -db <name> -service [TAB]
-				return_db_services
+			-service|-s) # srvctl status service -db <name> -service [TAB]
+				make_service_list
+				;;
+
+			-oraclehome)	#srvctl status home -oraclehome [TAB]
+				make_oracle_home_list
 				;;
 
 			*)
 				case "${COMP_WORDS[COMP_CWORDS-4]}" in
 					service)	# srvctl status service -db <name>  [TAB]
-						COMPREPLY=( $(compgen -W "-service -force -verbose -help" -- ${cur_word}) )
+						COMPREPLY=( "-service" )
 						;;
 
 					database)	# srvctl status database -db <name>  [TAB]
-						COMPREPLY=( $(compgen -W "-force -verbose -help" -- ${cur_word}) )
+						COMPREPLY=( "-verbose" )
 						;;
 
 					*)
@@ -130,7 +156,11 @@ function srvctl_complete
 							-diskgroup)	# srvctl status diskgroup -diskgroup <diskgroup> [TAB]
 								COMPREPLY=( "-detail" )
 								;;
-						
+
+							-oraclehome) # srvctl status home -oraclehome <OH> [TAB]
+								COMPREPLY=( "-statefile" )
+								;;
+
 							*)
 								COMPREPLY=(  )
 								;;
@@ -140,6 +170,7 @@ function srvctl_complete
 				;;
 		esac
 	fi
+
 	return 0
 }
 
