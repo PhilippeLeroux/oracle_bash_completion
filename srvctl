@@ -95,23 +95,6 @@ function _make_database_list
 					grep "\.db" | sed "s/NAME=ora\.\(.*\).db/\1/g" | xargs)"
 }
 
-#	return dbname index, -1 if not found.
-function _get_dbname_index
-{
-	typeset db_found=no
-	for i in $( seq $ifirstoption ${#COMP_WORDS[@]} )
-	do
-		if [[ ${COMP_WORDS[i]} == "-db" || ${COMP_WORDS[i]} == "-database" ]]
-		then
-			[ x"${COMP_WORDS[i+1]}" == x ] && echo -1 || echo $(( i + 1 ))
-			return 0
-		fi
-	done
-
-	echo -1
-}
-
-#	srvctl status service -db <dbname> -service [TAB]
 function _make_service_list
 {
 	_make_reply "$(crsctl stat res			|\
@@ -119,7 +102,6 @@ function _make_service_list
 					sed "s/NAME=ora\.\(.*\)\.svc/\1/g" | xargs)"
 }
 
-# srvctl status diskgroup -diskgroup [TAB]
 function _make_diskgroup_list
 {
 	_make_reply	"$(crsctl stat res		|\
@@ -127,7 +109,6 @@ function _make_diskgroup_list
 					sed "s/NAME=ora.\(.*\).dg/\1/g" | xargs)"
 }
 
-# srvctl status listener -listener [TAB]
 function _make_listener_list
 {
 	#	For RAC database we must exclude listener for scan vips.
@@ -137,7 +118,6 @@ function _make_listener_list
 					sed "s/NAME=ora.\(.*\).lsnr/\1/g" | xargs)"
 }
 
-# srvctl status home -oraclehome [TAB]
 function _make_oracle_home_list
 {
 	_make_reply	"$(cat /etc/oratab			|\
@@ -167,6 +147,21 @@ function _make_network_list
 function _make_node_list
 {
 	_make_reply "$(olsnodes | xargs)"
+}
+
+#	return dbname index, -1 if not found.
+function _get_dbname_index
+{
+	for i in $( seq $ifirstoption ${#COMP_WORDS[@]} )
+	do
+		if [[ ${COMP_WORDS[i]} == "-db" || ${COMP_WORDS[i]} == "-database" ]]
+		then
+			[ x"${COMP_WORDS[i+1]}" == x ] && echo -1 || echo $(( i + 1 ))
+			return 0
+		fi
+	done
+
+	echo -1
 }
 
 function _make_instance_list
@@ -451,5 +446,4 @@ function _srvctl_complete
 	fi
 }
 
-# Register srvctl_complete to provide completion for the following command_list
 complete -F _srvctl_complete srvctl
