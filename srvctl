@@ -91,7 +91,8 @@ function _make_object_list
 
 function _make_database_list
 {
-	_make_reply "$(crsctl stat res | grep "\.db" | sed "s/NAME=ora\.\(.*\).db/\1/g")"
+	_make_reply "$(crsctl stat res	|\
+					grep "\.db" | sed "s/NAME=ora\.\(.*\).db/\1/g" | xargs)"
 }
 
 #	return dbname index, -1 if not found.
