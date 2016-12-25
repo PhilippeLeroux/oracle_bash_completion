@@ -3,9 +3,7 @@
 Supported commands :
 
 * srvctl
-
-	complete :
-	* srvctl status
+	* full completion for command status
 
 * crsctl
 

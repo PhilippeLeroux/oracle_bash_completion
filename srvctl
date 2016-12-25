@@ -1,5 +1,5 @@
 # bash completion support for srvctl 12cR1
-# vim: ts=4:sw=4:filetype=sh
+# vim: ts=4:sw=4:filetype=sh:cc=81
 
 # Copyright (C) 2016 Philippe Leroux <philippe.lrx@gmail.com>
 # This program is free software: you can redistribute it and/or modify
@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-#	=================================================================================
-#	srvctl <command> <object> [<options>]
+#	============================================================================
 
 #	Pour mémo :
 #		COMP_WORDS	is an array of words in the current command line.
@@ -27,152 +26,468 @@
 #	status
 #		srvctl status service -db <dbname> -service <srvname>
 #		srvctl status database <-db <dbname>|-thishome|-thisversion <options>
+#			RAC incomplete : -serverpool
 #		srvctl status asm <options>
 #		srvctl status diskgroup -diskgroup <dgname> <options>
 #		srvctl status listener -listener <name>
 #		srvctl status home -oraclehome <OH> -statefile
 #		srvctl status ons
-#	=================================================================================
+#		...
+#	============================================================================
 
-function make_reply
+#	srvctl <command> <object> [<options>]
+#	COMP_WORD[0] == srvctl
+#	COMP_WORD[1] == command
+#	COMP_WORD[2] == object
+#	COMP_WORD[0] == first option
+typeset	-ri	icommand=1
+typeset	-ri	iobject=2
+typeset	-ri	ifirstoption=3
+
+typeset -r	command_list="enable disable start stop status add remove modify
+						update getenv setenv unsetenv config upgrade downgrade"
+
+# Global variables built dynamically
+#	object_list : contain all objects.
+
+SRVCTL_LOG=yes
+[ "$SRVCTL_LOG" == yes ] && > /tmp/srvctl_completion.log || true
+
+function log
 {
-	COMPREPLY=( $(compgen -W "$@" -- ${cur_word}) )
+	[ "$SRVCTL_LOG" == yes ] && echo "$@" >> /tmp/srvctl_completion.log || true
+}
+
+#	return 0 if cluster, 1 if standalone server
+function _is_cluster
+{
+	[ ! -v count_nodes ] && typeset	-gi count_nodes=$(wc -l<<<"$(olsnodes)") || true
+	[ $count_nodes -gt 1 ] && return 0 || return 1
+}
+
+function _make_reply
+{
+	COMPREPLY=( $( compgen -W "$@" -- ${COMP_WORDS[COMP_CWORD]} ) )
+}
+
+function _make_object_list
+{
+	if [ ! -v object_list ]
+	then
+		if _is_cluster
+		then
+			typeset -gA	object_list="database instance service nodeapps vip
+									listener asm scan scan_listener srvpool
+									server oc4j rhpserver rhpclient home
+									filesystem volume diskgroup cvu gns mgmtdb
+									mgmtlsnr exportfs havip mountfs"
+		else
+			typeset	-gA	object_list="database service asm diskgroup listener
+									home ons"
+		fi
+	fi
+
+	_make_reply "$object_list"
+}
+
+#	return type for database name $1
+function _database_type_for
+{
+	srvctl config database -db "$1" | grep "Type: " | cut -d\  -f2
+}
+
+#	Construct associative array database_list : ( [database name]=type )
+function _load_database_info
+{
+	typeset	-gA database_list
+	while read database_name
+	do
+		database_list+=( [$database_name]=$(_database_type_for $database_name) )
+	done<<<"$(srvctl config database)"
+}
+
+function _make_database_list
+{
+	[ ! -v database_list ] && _load_database_info
+	_make_reply "${!database_list[*]}"
+}
+
+#	return dbname index, -1 if not found.
+function _get_dbname_index
+{
+	typeset db_found=no
+	for i in $( seq $ifirstoption ${#COMP_WORDS[@]} )
+	do
+		if [[ ${COMP_WORDS[i]} == "-db" || ${COMP_WORDS[i]} == "-database" ]]
+		then
+			[ x"${COMP_WORDS[i+1]}" == x ] && echo -1 || echo $(( i + 1 ))
+			return 0
+		fi
+	done
+
+	echo -1
 }
 
 #	srvctl status service -db <dbname> -service [TAB]
-function make_service_list
+function _make_service_list
 {
-	# make cmd : srvctl status service -db <dbname>
-	typeset	cmd
-	for i in $( seq 0 $(( COMP_CWORD - 2 )) )
-	do
-		cmd="$cmd ${COMP_WORDS[i]}"
-	done
-	cmd="$cmd | sed 's/Service \(.*\) is running/\1/g' | xargs"
+	typeset	-i idbname=$(_get_dbname_index)
+	if [ $idbname -eq -1 ]
+	then
+		COMP_REPLY=()
+		return 0
+	fi
 
-	make_reply "$(eval $cmd)"
+	if [ -v service_list ]
+	then
+		if [ $(( SECONDS - tt_service_list )) -lt 60 ]
+		then
+			_make_reply "$service_list"
+			return 0
+		fi
+		# cache to old.
+	fi
+
+	typeset	cmd="srvctl status service -db ${COMP_WORDS[idbname]}"
+	cmd="$cmd | sed 's/Service \(.*\) is running.*/\1/g' | xargs"
+
+	typeset -g	service_list="$(eval $cmd)"
+	typeset	-gi	tt_service_list=$SECONDS
+	
+	_make_reply "$service_list"
 }
 
 # srvctl status diskgroup -diskgroup [TAB]
-function make_diskgroup_list
+function _make_diskgroup_list
 {
-	make_reply	"$(crsctl stat res		|\
+	_make_reply	"$(crsctl stat res		|\
 					grep -E "ora.*.dg"	|\
 					sed "s/NAME=ora.\(.*\).dg/\1/g" | xargs)"
 }
 
 # srvctl status listener -listener [TAB]
-function make_listener_list
+function _make_listener_list
 {
-	make_reply	"$(crsctl stat res			|\
-					grep -E "ora.*.lsnr"	|\
+	#	For RAC database we must exclude listener for scan vips.
+	_make_reply	"$(crsctl stat res				|\
+					grep -E "NAME=ora.*.lsnr"	|\
+					grep -v "SCAN"				|\
 					sed "s/NAME=ora.\(.*\).lsnr/\1/g" | xargs)"
 }
 
 # srvctl status home -oraclehome [TAB]
-function make_oracle_home_list
+function _make_oracle_home_list
 {
-	make_reply	"$(cat /etc/oratab			|\
+	_make_reply	"$(cat /etc/oratab			|\
 					grep -E "^(\+|[A-Z])"	|\
 					sed "s/.*:\(.*\):[Y|N].*/\1/g" | xargs)"
 }
 
-function srvctl_complete
+function _make_vip_list
 {
-	typeset cur_word="${COMP_WORDS[COMP_CWORD]}"
+	_make_reply	"$(crsctl stat res				|\
+					grep -E "NAME=ora.*.vip"	|\
+					grep -v "scan"				|\
+					sed "s/NAME=ora.\(.*\).vip/\1/g" | xargs)"
+}
+
+function _make_network_list
+{
+	typeset -i count_net=$(crsctl stat res|grep -E "\.network$"|wc -l)
+	typeset list
+	for i in $( seq $count_net )
+	do
+		list="$list $i"
+	done
+	_make_reply "$list"
+}
+
+function _make_node_list
+{
+	_make_reply "$(olsnodes | xargs)"
+}
+
+function _make_instance_list
+{
+	typeset	-i idbname=$(_get_dbname_index)
+	if [ $idbname -eq -1 ]
+	then
+		COMP_REPLY=()
+		return 0
+	fi
+
+	if [ -v instance_list ]
+	then
+		if [ $(( SECONDS - tt_instance_list )) -lt 60 ]
+		then
+			_make_reply "$instance_list"
+			return 0
+		fi
+		# cache to old.
+	fi
+
+	typeset	cmd="srvctl status database -db ${COMP_WORDS[idbname]}"
+	cmd="$cmd | sed 's/Instance \(.*\) is running.*/\1/g' | xargs"
+	log "cmd='$cmd'"
+
+	typeset -g	instance_list="$(eval $cmd)"
+	typeset	-gi	tt_instance_list=$SECONDS
+
+	_make_reply "$instance_list"
+}
+
+function remove_used_options
+{
+	typeset	option_list="$@"
+
+	for i in $( seq $ifirstoption ${#COMP_WORDS[@]} )
+	do
+		if [[ $i -ne $COMP_CWORD && "$option_list" == *"${COMP_WORDS[i]}"* ]]
+		then
+			option_list=${option_list/${COMP_WORDS[i]}/}
+		fi
+	done
+
+	echo $option_list
+}
+
+function _make_reply_for_options
+{
+	typeset	option_list="$@"
+
+	if [ $COMP_CWORD == $ifirstoption ]
+	then
+		_make_reply "$option_list"
+	else
+		_make_reply "$(remove_used_options $option_list)"
+	fi
+}
+
+function _make_status_option_list_for
+{
+	typeset	-r object_name="$1"
+
+	case "$object_name" in
+		database)
+			if _is_cluster
+			then
+				_make_reply_for_options "-db -serverpool -thisversion -thishome
+										-force verbose"
+			else
+				_make_reply_for_options "-db -thisversion -thishome
+										-force -verbose"
+			fi
+			;;
+
+		instance)
+			_make_reply_for_options "-db -node -instance -force -verbose"
+			;;
+
+		service)
+			_make_reply_for_options "-db -service -force -verbose"
+			;;
+
+		nodeapps)
+			_make_reply "-node"
+			;;
+
+		vip)
+			_make_reply_for_options "-node -vip -verbose"
+			;;
+
+		listener)
+			_make_reply_for_options "-listener -verbose"
+			;;
+
+		asm)
+			_make_reply_for_options "-detail -verbose"
+			;;
+
+		scan|scan_listener)
+			_make_reply_for_options "-netnum -scannumber -all -verbose"
+			;;
+
+		srvpool)
+			log "todo _make_status_option_list_for $@"
+			;;
+
+		server)
+			_make_reply_for_options "-servers -detail"
+			;;
+
+		oc4j)
+			_make_reply_for_options "-node -verbose"
+			;;
+
+		rhpserver)
+			COMP_REPLY=()
+			;;
+
+		rhpclient)
+			COMP_REPLY=()
+			;;
+
+		home)
+			if _is_cluster
+			then
+				_make_reply_for_options "-node -oraclehome -statefile"
+			else
+				_make_reply_for_options "-oraclehome -statefile"
+			fi
+			;;
+
+		filesystem)
+			_make_reply_for_options "-device -verbose"
+			;;
+
+		volume)
+			_make_reply_for_options "-volume -diskgroup -device -node -all"
+			;;
+
+		diskgroup)
+			if _is_cluster
+			then
+				_make_reply_for_options "-diskgroup -node -detail -verbose"
+			else
+				_make_reply_for_options "-diskgroup -detail -verbose"
+			fi
+			;;
+
+		cvu)
+			_make_reply_for_options "-node"
+			;;
+
+		gns)
+			_make_reply_for_options "-node -verbose"
+			;;
+
+		mgmtdb)
+			_make_reply_for_options "-verbose"
+			;;
+
+		mgmtlsnr)
+			_make_reply_for_options "-verbose"
+			;;
+
+		exportfs)
+			_make_reply_for_options "-name -id"
+			;;
+
+		havip)
+			_make_reply_for_options "-id"
+			;;
+
+		mountfs)
+			_make_reply_for_options "-name"
+			;;
+
+		ons)
+			_make_reply_for_options "-verbose"
+			;;
+
+		*)
+			log "error object '$object_name' unknow."
+			COMP_REPLY=()
+			;;
+	esac
+}
+
+function _complete_status_options_for
+{
+	typeset	-r object_name="$1"
+
+	case "$prev_word" in
+		-diskgroup)
+			_make_diskgroup_list
+			;;
+
+		-db|-database)
+			_make_database_list
+			;;
+
+		-service|-s)
+			_make_service_list
+			;;
+
+		-listener)
+			_make_listener_list
+			;;
+
+		-oraclehome)
+			_make_oracle_home_list
+			;;
+
+		-node|-servers)
+			_make_node_list
+			;;
+
+		-instance)
+			_make_instance_list
+			;;
+
+		-vip)
+			_make_vip_list
+			;;
+
+		-scannumber)
+			_make_reply "1 2 3"
+			;;
+
+		-netnum)
+			_make_network_list
+			;;
+
+		*)
+			_make_status_option_list_for $object_name
+			;;
+	esac
+}
+
+function _srvctl_complete
+{
 	typeset prev_word="${COMP_WORDS[COMP_CWORD-1]}"
 
-	typeset commands="enable disable start stop status add remove modify update getenv setenv unsetenv config upgrade downgrade"
+	#	srvctl <command> <object> firstoption ...
+	log
+	log "${COMP_WORDS[*]}"
+	log "command       : ${COMP_WORDS[icommand]}"
+	log "object        : ${COMP_WORDS[iobject]}"
+	log "first option  : ${COMP_WORDS[ifirstoption]}"
+	log "cur_word      : ${COMP_WORDS[COMP_CWORD]}"
+	log "prev_word     : $prev_word"
+	log "COMP_CWORD    : $COMP_CWORD"
 
-	if [[ "$commands" == *"$prev_word"* ]]
-	then	# srvctl <command> [TAB]
-		make_reply "database service asm diskgroup listener home ons"
-	else
-		case "$prev_word" in
-			srvctl)
-				make_reply "${commands}"
-				;;
-
-			database)	# srvctl status database [TAB]
-				make_reply "-database -thisversion -thishome"
-				;;
-
-			service)	# srvctl status service [TAB]
-				COMPREPLY=( "-database" )
-				;;
-
-			asm)	# srvctl status asm [TAB]
-				make_reply "-detail -verbose"
-				;;
-
-			diskgroup)	# srvctl status diskgroup [TAB]
-				make_reply "-diskgroup -detail -verbose"
-				;;
-
-			listener)	# srvctl status listener [TAB]
-				make_reply "-listener"
-				;;
-
-			home)	# srvctl status home [TAB]
-				COMPREPLY=( "-oraclehome" )
-				;;
-
-			-thisversion|-thishome) # srvctl status database -thisversion|-thishome
-				COMPREPLY=( "-verbose" )
-				;;
-
-			-listener)	# srvctl status listener -listener [TAB]
-				make_listener_list
-				;;
-
-			-diskgroup)	# srvctl status diskgroup -diskgroup [TAB]
-				make_diskgroup_list
-				;;
-
-			-database|-db)	# srvctl status <object> -db [TAB]
-				make_reply "$(srvctl config database | xargs)"
-				;;
-
-			-service|-s) # srvctl status service -db <name> -service [TAB]
-				make_service_list
-				;;
-
-			-oraclehome)	#srvctl status home -oraclehome [TAB]
-				make_oracle_home_list
+	if [[ "$prev_word" == "srvctl" ]]
+	then # srvctl TAB
+		_make_reply "${command_list}"
+	elif [[ "$command_list" == *"$prev_word"* ]]
+	then # srvctl <command> TAB
+		_make_object_list
+	elif [[ "$object_list" == *"$prev_word"* ]]
+	then # srvctl <command> <object> TAB
+		case ${COMP_WORDS[icommand]} in
+			status)
+				_make_status_option_list_for ${COMP_WORDS[iobject]}
 				;;
 
 			*)
-				case "${COMP_WORDS[COMP_CWORDS-4]}" in
-					service)	# srvctl status service -db <name>  [TAB]
-						COMPREPLY=( "-service" )
-						;;
+				log "todo option for '${COMP_WORDS[icommand]}'"
+				COMP_REPLY=()
+				;;
+		esac
+	else
+		case ${COMP_WORDS[icommand]} in
+			status)
+				_complete_status_options_for ${COMP_WORDS[iobject]}
+				;;
 
-					database)	# srvctl status database -db <name>  [TAB]
-						COMPREPLY=( "-verbose" )
-						;;
-
-					*)
-						case "${COMP_WORDS[COMP_CWORDS-3]}" in
-							-diskgroup)	# srvctl status diskgroup -diskgroup <diskgroup> [TAB]
-								COMPREPLY=( "-detail" )
-								;;
-
-							-oraclehome) # srvctl status home -oraclehome <OH> [TAB]
-								COMPREPLY=( "-statefile" )
-								;;
-
-							*)
-								COMPREPLY=(  )
-								;;
-						esac
-						;;
-				esac
+			*)
+				log "todo complete option for '${COMP_WORDS[icommand]}'"
+				COMP_REPLY=()
 				;;
 		esac
 	fi
-
-	return 0
 }
 
-# Register srvctl_complete to provide completion for the following commands
-complete -F srvctl_complete srvctl
+# Register srvctl_complete to provide completion for the following command_list
+complete -F _srvctl_complete srvctl

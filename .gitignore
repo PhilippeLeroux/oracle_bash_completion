@@ -1,0 +1,24 @@
+# Fichier [g]vim de travaille
+*.swp
+*.sw*
+*.log
+
+#Dolpin
+.Trash*
+
+#Logs
+logs/**
+
+#Fichiers temporaires
+tmp/**
+
+#Fichier LibreOffice
+*.odp#
+
+#divers
+.directory
+
+#
+*.link
+
+copy_to
