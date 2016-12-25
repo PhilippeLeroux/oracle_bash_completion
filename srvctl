@@ -50,7 +50,6 @@ typeset -r	command_list="enable disable start stop status add remove modify
 # Global variables built dynamically
 #	object_list : contain all objects.
 
-SRVCTL_LOG=yes
 [ "$SRVCTL_LOG" == yes ] && > /tmp/srvctl_completion.log || true
 
 function log
@@ -76,13 +75,13 @@ function _make_object_list
 	then
 		if _is_cluster
 		then
-			typeset -gA	object_list="database instance service nodeapps vip
+			typeset -g	object_list="database instance service nodeapps vip
 									listener asm scan scan_listener srvpool
 									server oc4j rhpserver rhpclient home
 									filesystem volume diskgroup cvu gns mgmtdb
 									mgmtlsnr exportfs havip mountfs"
 		else
-			typeset	-gA	object_list="database service asm diskgroup listener
+			typeset	-g	object_list="database service asm diskgroup listener
 									home ons"
 		fi
 	fi
@@ -90,26 +89,9 @@ function _make_object_list
 	_make_reply "$object_list"
 }
 
-#	return type for database name $1
-function _database_type_for
-{
-	srvctl config database -db "$1" | grep "Type: " | cut -d\  -f2
-}
-
-#	Construct associative array database_list : ( [database name]=type )
-function _load_database_info
-{
-	typeset	-gA database_list
-	while read database_name
-	do
-		database_list+=( [$database_name]=$(_database_type_for $database_name) )
-	done<<<"$(srvctl config database)"
-}
-
 function _make_database_list
 {
-	[ ! -v database_list ] && _load_database_info
-	_make_reply "${!database_list[*]}"
+	_make_reply "$(crsctl stat res | grep "\.db" | sed "s/NAME=ora\.\(.*\).db/\1/g")"
 }
 
 #	return dbname index, -1 if not found.
