@@ -52,7 +52,7 @@ typeset -r	command_list="enable disable start stop status add remove modify
 
 [ "$SRVCTL_LOG" == yes ] && > /tmp/srvctl_completion.log || true
 
-function log
+function _log
 {
 	[ "$SRVCTL_LOG" == yes ] && echo "$@" >> /tmp/srvctl_completion.log || true
 }
@@ -114,30 +114,9 @@ function _get_dbname_index
 #	srvctl status service -db <dbname> -service [TAB]
 function _make_service_list
 {
-	typeset	-i idbname=$(_get_dbname_index)
-	if [ $idbname -eq -1 ]
-	then
-		COMP_REPLY=()
-		return 0
-	fi
-
-	if [ -v service_list ]
-	then
-		if [ $(( SECONDS - tt_service_list )) -lt 60 ]
-		then
-			_make_reply "$service_list"
-			return 0
-		fi
-		# cache to old.
-	fi
-
-	typeset	cmd="srvctl status service -db ${COMP_WORDS[idbname]}"
-	cmd="$cmd | sed 's/Service \(.*\) is running.*/\1/g' | xargs"
-
-	typeset -g	service_list="$(eval $cmd)"
-	typeset	-gi	tt_service_list=$SECONDS
-	
-	_make_reply "$service_list"
+	_make_reply "$(crsctl stat res			|\
+					grep -E "ora.*.svc"	|\
+					sed "s/NAME=ora\.\(.*\)\.svc/\1/g" | xargs)"
 }
 
 # srvctl status diskgroup -diskgroup [TAB]
@@ -211,7 +190,7 @@ function _make_instance_list
 
 	typeset	cmd="srvctl status database -db ${COMP_WORDS[idbname]}"
 	cmd="$cmd | sed 's/Instance \(.*\) is running.*/\1/g' | xargs"
-	log "cmd='$cmd'"
+	_log "cmd='$cmd'"
 
 	typeset -g	instance_list="$(eval $cmd)"
 	typeset	-gi	tt_instance_list=$SECONDS
@@ -291,7 +270,7 @@ function _make_status_option_list_for
 			;;
 
 		srvpool)
-			log "todo _make_status_option_list_for $@"
+			_log "todo _make_status_option_list_for $@"
 			;;
 
 		server)
@@ -369,7 +348,7 @@ function _make_status_option_list_for
 			;;
 
 		*)
-			log "error object '$object_name' unknow."
+			_log "error object '$object_name' unknow."
 			COMP_REPLY=()
 			;;
 	esac
@@ -431,14 +410,14 @@ function _srvctl_complete
 	typeset prev_word="${COMP_WORDS[COMP_CWORD-1]}"
 
 	#	srvctl <command> <object> firstoption ...
-	log
-	log "${COMP_WORDS[*]}"
-	log "command       : ${COMP_WORDS[icommand]}"
-	log "object        : ${COMP_WORDS[iobject]}"
-	log "first option  : ${COMP_WORDS[ifirstoption]}"
-	log "cur_word      : ${COMP_WORDS[COMP_CWORD]}"
-	log "prev_word     : $prev_word"
-	log "COMP_CWORD    : $COMP_CWORD"
+	_log
+	_log "${COMP_WORDS[*]}"
+	_log "command       : ${COMP_WORDS[icommand]}"
+	_log "object        : ${COMP_WORDS[iobject]}"
+	_log "first option  : ${COMP_WORDS[ifirstoption]}"
+	_log "cur_word      : ${COMP_WORDS[COMP_CWORD]}"
+	_log "prev_word     : $prev_word"
+	_log "COMP_CWORD    : $COMP_CWORD"
 
 	if [[ "$prev_word" == "srvctl" ]]
 	then # srvctl TAB
@@ -454,7 +433,7 @@ function _srvctl_complete
 				;;
 
 			*)
-				log "todo option for '${COMP_WORDS[icommand]}'"
+				_log "todo option for '${COMP_WORDS[icommand]}'"
 				COMP_REPLY=()
 				;;
 		esac
@@ -465,7 +444,7 @@ function _srvctl_complete
 				;;
 
 			*)
-				log "todo complete option for '${COMP_WORDS[icommand]}'"
+				_log "todo complete option for '${COMP_WORDS[icommand]}'"
 				COMP_REPLY=()
 				;;
 		esac
