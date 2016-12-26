@@ -49,9 +49,9 @@ typeset -r	command_list="enable disable start stop status add remove modify
 
 # Global variables built dynamically
 #	object_list : contain all objects.
+#	count_nodes : number of nodes.
 
-[ "$SRVCTL_LOG" == yes ] && > /tmp/srvctl_completion.log || true
-
+#	Work only with : export SRVCTL_LOG=yes
 function _log
 {
 	[ "$SRVCTL_LOG" == yes ] && echo "$@" >> /tmp/srvctl_completion.log || true
@@ -60,7 +60,7 @@ function _log
 #	return 0 if cluster, 1 if standalone server
 function _is_cluster
 {
-	[ ! -v count_nodes ] && typeset	-gi count_nodes=$(wc -l<<<"$(olsnodes)") || true
+	[ ! -v count_nodes ] && typeset	-rgi count_nodes=$(wc -l<<<"$(olsnodes)") || true
 	[ $count_nodes -gt 1 ] && return 0 || return 1
 }
 
@@ -75,13 +75,13 @@ function _make_object_list
 	then
 		if _is_cluster
 		then
-			typeset -g	object_list="database instance service nodeapps vip
+			typeset -rg	object_list="database instance service nodeapps vip
 									listener asm scan scan_listener srvpool
 									server oc4j rhpserver rhpclient home
 									filesystem volume diskgroup cvu gns mgmtdb
 									mgmtlsnr exportfs havip mountfs"
 		else
-			typeset	-g	object_list="database service asm diskgroup listener
+			typeset	-rg	object_list="database service asm diskgroup listener
 									home ons"
 		fi
 	fi
@@ -92,20 +92,13 @@ function _make_object_list
 function _make_database_list
 {
 	_make_reply "$(crsctl stat res	|\
-					grep "\.db" | sed "s/NAME=ora\.\(.*\).db/\1/g" | xargs)"
-}
-
-function _make_service_list
-{
-	_make_reply "$(crsctl stat res			|\
-					grep -E "ora.*.svc"	|\
-					sed "s/NAME=ora\.\(.*\)\.svc/\1/g" | xargs)"
+					grep "\.db$" | sed "s/NAME=ora\.\(.*\).db/\1/g" | xargs)"
 }
 
 function _make_diskgroup_list
 {
 	_make_reply	"$(crsctl stat res		|\
-					grep -E "ora.*.dg"	|\
+					grep -E "ora.*.dg$"	|\
 					sed "s/NAME=ora.\(.*\).dg/\1/g" | xargs)"
 }
 
@@ -113,7 +106,7 @@ function _make_listener_list
 {
 	#	For RAC database we must exclude listener for scan vips.
 	_make_reply	"$(crsctl stat res				|\
-					grep -E "NAME=ora.*.lsnr"	|\
+					grep -E "NAME=ora.*.lsnr$"	|\
 					grep -v "SCAN"				|\
 					sed "s/NAME=ora.\(.*\).lsnr/\1/g" | xargs)"
 }
@@ -128,7 +121,7 @@ function _make_oracle_home_list
 function _make_vip_list
 {
 	_make_reply	"$(crsctl stat res				|\
-					grep -E "NAME=ora.*.vip"	|\
+					grep -E "NAME=ora.*.vip$"	|\
 					grep -v "scan"				|\
 					sed "s/NAME=ora.\(.*\).vip/\1/g" | xargs)"
 }
@@ -144,12 +137,24 @@ function _make_network_list
 	_make_reply "$list"
 }
 
+function _make_node_number_list
+{
+	[ ! -v count_nodes ] && _is_cluster || true
+
+	typeset list
+	for i in $( seq $count_nodes )
+	do
+		list="$list $i"
+	done
+	_make_reply "$list"
+}
+
 function _make_node_list
 {
 	_make_reply "$(olsnodes | xargs)"
 }
 
-#	return dbname index, -1 if not found.
+#	return dbname index in COMP_WORDS, -1 if not found.
 function _get_dbname_index
 {
 	for i in $( seq $ifirstoption ${#COMP_WORDS[@]} )
@@ -164,12 +169,28 @@ function _get_dbname_index
 	echo -1
 }
 
+function _make_service_list
+{
+	typeset	-ri idbname=$(_get_dbname_index)
+	if [ $idbname -eq -1 ]
+	then # return all services
+		_make_reply "$(crsctl stat res			|\
+						grep -E "ora.*.svc$"	|\
+						sed "s/NAME=ora\.\(.*\)\.svc/\1/g" | xargs)"
+	else # return services for specified database.
+		typeset -r dbname=$(tr [:upper:] [:lower:]<<<"${COMP_WORDS[idbname]}")
+		_make_reply "$(crsctl stat res						|\
+						grep -Ei "ora.$dbname.*.svc$"		|\
+						sed "s/NAME=ora\.${dbname}\.\(.*\)\.svc/\1/g" | xargs)"
+	fi
+}
+
 function _make_instance_list
 {
-	typeset	-i idbname=$(_get_dbname_index)
+	typeset	-ri idbname=$(_get_dbname_index)
 	if [ $idbname -eq -1 ]
 	then
-		COMP_REPLY=()
+		COMPREPLY=()
 		return 0
 	fi
 
@@ -193,7 +214,7 @@ function _make_instance_list
 	_make_reply "$instance_list"
 }
 
-function remove_used_options
+function _remove_used_options
 {
 	typeset	option_list="$@"
 
@@ -216,7 +237,7 @@ function _make_reply_for_options
 	then
 		_make_reply "$option_list"
 	else
-		_make_reply "$(remove_used_options $option_list)"
+		_make_reply "$(_remove_used_options $option_list)"
 	fi
 }
 
@@ -229,7 +250,7 @@ function _make_status_option_list_for
 			if _is_cluster
 			then
 				_make_reply_for_options "-db -serverpool -thisversion -thishome
-										-force verbose"
+										-force -verbose"
 			else
 				_make_reply_for_options "-db -thisversion -thishome
 										-force -verbose"
@@ -277,11 +298,11 @@ function _make_status_option_list_for
 			;;
 
 		rhpserver)
-			COMP_REPLY=()
+			COMPREPLY=()
 			;;
 
 		rhpclient)
-			COMP_REPLY=()
+			COMPREPLY=()
 			;;
 
 		home)
@@ -344,7 +365,7 @@ function _make_status_option_list_for
 
 		*)
 			_log "error object '$object_name' unknow."
-			COMP_REPLY=()
+			COMPREPLY=()
 			;;
 	esac
 }
@@ -400,6 +421,94 @@ function _complete_status_options_for
 	esac
 }
 
+function _make_start_option_list_for
+{
+	typeset	-r	object_name="$1"
+
+	case "$object_name" in
+		database)
+			# -node only for RAC On Node
+			# -eval for policy managed
+			_make_reply_for_options "-db -startoption -startconcurrency
+									-eval -verbose"
+			;;
+
+		*)
+			_log "_make_start_option_list_for $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
+}
+
+function _complete_start_options_for
+{
+	typeset	-r object_name="$1"
+
+	case "$prev_word" in
+		-db|-database)
+			_make_database_list
+			;;
+
+		-startconcurrency)
+			_make_node_number_list
+			;;
+
+		read)
+			COMPREPLY=( only )
+			;;
+
+		-startoption)
+			_make_reply "open mount read"
+			;;
+
+		*)
+			_make_start_option_list_for $object_name
+			;;
+	esac
+}
+
+function _make_stop_option_list_for
+{
+	typeset	-r	object_name="$1"
+
+	case "$object_name" in
+		database)
+			# -node only for RAC On Node
+			# -eval for policy managed
+			_make_reply_for_options "-db -stopoption -stopconcurrency
+									-force -eval -verbose"
+			;;
+
+		*)
+			_log "_make_start_option_list_for $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
+}
+
+function _complete_stop_options_for
+{
+	typeset	-r object_name="$1"
+
+	case "$prev_word" in
+		-db|-database)
+			_make_database_list
+			;;
+
+		-stopconcurrency)
+			_make_node_number_list
+			;;
+
+		-stopoption)
+			_make_reply "normal transactional immediate abort"
+			;;
+
+		*)
+			_make_stop_option_list_for $object_name
+			;;
+	esac
+}
+
 function _srvctl_complete
 {
 	typeset prev_word="${COMP_WORDS[COMP_CWORD-1]}"
@@ -427,9 +536,17 @@ function _srvctl_complete
 				_make_status_option_list_for ${COMP_WORDS[iobject]}
 				;;
 
+			start)
+				_make_start_option_list_for ${COMP_WORDS[iobject]}
+				;;
+
+			stop)
+				_make_stop_option_list_for ${COMP_WORDS[iobject]}
+				;;
+
 			*)
 				_log "todo option for '${COMP_WORDS[icommand]}'"
-				COMP_REPLY=()
+				COMPREPLY=()
 				;;
 		esac
 	else
@@ -438,12 +555,22 @@ function _srvctl_complete
 				_complete_status_options_for ${COMP_WORDS[iobject]}
 				;;
 
+			start)
+				_complete_start_options_for ${COMP_WORDS[iobject]}
+				;;
+
+			stop)
+				_complete_stop_options_for ${COMP_WORDS[iobject]}
+				;;
+
 			*)
 				_log "todo complete option for '${COMP_WORDS[icommand]}'"
-				COMP_REPLY=()
+				COMPREPLY=()
 				;;
 		esac
 	fi
+
+	_log "return : '${COMPREPLY[*]}'"
 }
 
 complete -F _srvctl_complete srvctl
