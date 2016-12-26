@@ -235,7 +235,7 @@ function _reply_for_options
 }
 
 #	reply for command status on object $1
-function _status_reply_on_object
+function _reply_for_status_on_object
 {
 	typeset	-r object_name="$1"
 
@@ -280,7 +280,7 @@ function _status_reply_on_object
 			;;
 
 		srvpool)
-			_log "todo _status_reply_on_object $@"
+			_log "todo _reply_for_status_on_object $@"
 			;;
 
 		server)
@@ -365,7 +365,7 @@ function _status_reply_on_object
 }
 
 #	next reply for command status on object $1 (after the first option)
-function _status_next_reply_on_object
+function _next_reply_for_status_on_object
 {
 	typeset	-r object_name="$1"
 
@@ -411,13 +411,13 @@ function _status_next_reply_on_object
 			;;
 
 		*)
-			_status_reply_on_object $object_name
+			_reply_for_status_on_object $object_name
 			;;
 	esac
 }
 
 #	reply for command start on object $1
-function _start_reply_on_object
+function _reply_for_start_on_object
 {
 	typeset	-r	object_name="$1"
 
@@ -435,14 +435,14 @@ function _start_reply_on_object
 			;;
 
 		*)
-			_log "_start_reply_on_object $object_name : todo"
+			_log "_reply_for_start_on_object $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
 }
 
 #	next reply for command start on object $1 (after the first option)
-function _start_next_reply_on_object
+function _next_reply_for_start_on_object
 {
 	typeset	-r object_name="$1"
 
@@ -464,13 +464,13 @@ function _start_next_reply_on_object
 			;;
 
 		*)
-			_start_reply_on_object $object_name
+			_reply_for_start_on_object $object_name
 			;;
 	esac
 }
 
 #	reply for command stop on object $1
-function _stop_reply_on_object
+function _reply_for_stop_on_object
 {
 	typeset	-r	object_name="$1"
 
@@ -488,14 +488,14 @@ function _stop_reply_on_object
 			;;
 
 		*)
-			_log "_start_reply_on_object $object_name : todo"
+			_log "_reply_for_start_on_object $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
 }
 
 #	next reply for command stop on object $1 (after the first option)
-function _stop_next_reply_on_object
+function _next_reply_for_stop_on_object
 {
 	typeset	-r object_name="$1"
 
@@ -513,13 +513,13 @@ function _stop_next_reply_on_object
 			;;
 
 		*)
-			_stop_reply_on_object $object_name
+			_reply_for_stop_on_object $object_name
 			;;
 	esac
 }
 
 #	reply for command config on object $1
-function _config_reply_on_object
+function _reply_for_config_on_object
 {
 	typeset	-r	object_name="$1"
 
@@ -569,14 +569,14 @@ function _config_reply_on_object
 			;;
 
 		*)
-			_log "_start_reply_on_object $object_name : todo"
+			_log "_reply_for_start_on_object $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
 }
 
 #	next reply for command config on object $1 (after the first option)
-function _config_next_reply_on_object
+function _next_reply_for_config_on_object
 {
 	typeset	-r object_name="$1"
 
@@ -594,7 +594,7 @@ function _config_next_reply_on_object
 			;;
 
 		*)
-			_config_reply_on_object $object_name
+			_reply_for_config_on_object $object_name
 			;;
 	esac
 }
@@ -623,19 +623,19 @@ function _srvctl_complete
 	then # srvctl <command> <object> TAB
 		case ${COMP_WORDS[icommand]} in
 			status)
-				_status_reply_on_object ${COMP_WORDS[iobject]}
+				_reply_for_status_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			start)
-				_start_reply_on_object ${COMP_WORDS[iobject]}
+				_reply_for_start_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			stop)
-				_stop_reply_on_object ${COMP_WORDS[iobject]}
+				_reply_for_stop_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			config)
-				_config_reply_on_object ${COMP_WORDS[iobject]}
+				_reply_for_config_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			*)
@@ -643,22 +643,22 @@ function _srvctl_complete
 				COMPREPLY=()
 				;;
 		esac
-	else
+	else # srvctl <command> <object> opt1 opt2 ... TAB
 		case ${COMP_WORDS[icommand]} in
 			status)
-				_status_next_reply_on_object ${COMP_WORDS[iobject]}
+				_next_reply_for_status_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			start)
-				_start_next_reply_on_object ${COMP_WORDS[iobject]}
+				_next_reply_for_start_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			stop)
-				_stop_next_reply_on_object ${COMP_WORDS[iobject]}
+				_next_reply_for_stop_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			config)
-				_config_next_reply_on_object ${COMP_WORDS[iobject]}
+				_next_reply_for_config_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			*)
