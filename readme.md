@@ -3,9 +3,10 @@
 Supported commands :
 
 * srvctl \<command\> \<object\> option1, option2, ...
-	* status : full support for all objects
-	* start database : must be tested on standalone, policy managed (-eval), One Node.
-	* stop database : must be tested on standalone, policy managed (-eval), One Node.
+	* status : full support.
+	* config : support for standalone.
+	* start database : must be tested on policy managed (-eval) & One Node (-node).
+	* stop database : must be tested on policy managed (-eval).
 
 * crsctl
 

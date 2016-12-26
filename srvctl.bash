@@ -16,23 +16,10 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #	============================================================================
-
 #	Pour mémo :
 #		COMP_WORDS	is an array of words in the current command line.
 #		COMP_CWORD	is the index of the current word in the command line.
 #		COMPREPLY	is a list of replies.
-
-#	Done :
-#	status
-#		srvctl status service -db <dbname> -service <srvname>
-#		srvctl status database <-db <dbname>|-thishome|-thisversion <options>
-#			RAC incomplete : -serverpool
-#		srvctl status asm <options>
-#		srvctl status diskgroup -diskgroup <dgname> <options>
-#		srvctl status listener -listener <name>
-#		srvctl status home -oraclehome <OH> -statefile
-#		srvctl status ons
-#		...
 #	============================================================================
 
 #	srvctl <command> <object> [<options>]
@@ -64,69 +51,80 @@ function _is_cluster
 	[ $count_nodes -gt 1 ] && return 0 || return 1
 }
 
-function _make_reply
+#	build the reply : COMP_REPLY is set.
+function _reply
 {
 	COMPREPLY=( $( compgen -W "$@" -- ${COMP_WORDS[COMP_CWORD]} ) )
 }
 
-function _make_object_list
+#	init global variable object_list with all objects for the courent command.
+#	reply with object_list
+function _reply_with_object_list
 {
-	if [ ! -v object_list ]
+	if _is_cluster
 	then
-		if _is_cluster
-		then
-			typeset -rg	object_list="database instance service nodeapps vip
-									listener asm scan scan_listener srvpool
-									server oc4j rhpserver rhpclient home
-									filesystem volume diskgroup cvu gns mgmtdb
-									mgmtlsnr exportfs havip mountfs"
-		else
-			typeset	-rg	object_list="database service asm diskgroup listener
-									home ons"
-		fi
+		typeset -g	object_list="database instance service nodeapps vip
+								listener asm scan scan_listener srvpool
+								server oc4j rhpserver rhpclient home
+								filesystem volume diskgroup cvu gns mgmtdb
+								mgmtlsnr exportfs havip mountfs"
+	else
+		typeset	-g	object_list="database service asm diskgroup listener
+								home ons"
 	fi
 
-	_make_reply "$object_list"
+	case ${COMP_WORDS[icommand]} in
+		config) # TODO : for RAC
+			object_list=${object_list/diskgroup/}
+			object_list=${object_list/home/}
+			;;
+
+		getenv) # TODO : for RAC
+			object_list="database asm listener"
+			;;
+	esac
+
+	_reply "$object_list"
 }
 
-function _make_database_list
+function _reply_with_database_list
 {
-	_make_reply "$(crsctl stat res	|\
+	_reply "$(crsctl stat res	|\
 					grep "\.db$" | sed "s/NAME=ora\.\(.*\).db/\1/g" | xargs)"
 }
 
-function _make_diskgroup_list
+function _reply_with_diskgroup_list
 {
-	_make_reply	"$(crsctl stat res		|\
+	_reply	"$(crsctl stat res		|\
 					grep -E "ora.*.dg$"	|\
 					sed "s/NAME=ora.\(.*\).dg/\1/g" | xargs)"
 }
 
-function _make_listener_list
+function _reply_with_listener_list
 {
 	#	For RAC database we must exclude listener for scan vips.
-	_make_reply	"$(crsctl stat res				|\
+	_reply	"$(crsctl stat res				|\
 					grep -E "NAME=ora.*.lsnr$"	|\
 					grep -v "SCAN"				|\
 					sed "s/NAME=ora.\(.*\).lsnr/\1/g" | xargs)"
 }
 
-function _make_oracle_home_list
+function _reply_with_oracle_home_list
 {
-	_make_reply	"$(cat /etc/oratab			|\
+	_reply	"$(cat /etc/oratab			|\
 					grep -E "^(\+|[A-Z])"	|\
 					sed "s/.*:\(.*\):[Y|N].*/\1/g" | xargs)"
 }
 
-function _make_vip_list
+function _reply_with_vip_list
 {
-	_make_reply	"$(crsctl stat res				|\
+	_reply	"$(crsctl stat res				|\
 					grep -E "NAME=ora.*.vip$"	|\
 					grep -v "scan"				|\
 					sed "s/NAME=ora.\(.*\).vip/\1/g" | xargs)"
 }
 
-function _make_network_list
+function _reply_with_network_list
 {
 	typeset -i count_net=$(crsctl stat res|grep -E "\.network$"|wc -l)
 	typeset list
@@ -134,10 +132,10 @@ function _make_network_list
 	do
 		list="$list $i"
 	done
-	_make_reply "$list"
+	_reply "$list"
 }
 
-function _make_node_number_list
+function _reply_with_node_number_list
 {
 	[ ! -v count_nodes ] && _is_cluster || true
 
@@ -146,12 +144,12 @@ function _make_node_number_list
 	do
 		list="$list $i"
 	done
-	_make_reply "$list"
+	_reply "$list"
 }
 
-function _make_node_list
+function _reply_with_node_list
 {
-	_make_reply "$(olsnodes | xargs)"
+	_reply "$(olsnodes | xargs)"
 }
 
 #	return dbname index in COMP_WORDS, -1 if not found.
@@ -169,23 +167,23 @@ function _get_dbname_index
 	echo -1
 }
 
-function _make_service_list
+function _reply_with_service_list
 {
 	typeset	-ri idbname=$(_get_dbname_index)
 	if [ $idbname -eq -1 ]
 	then # return all services
-		_make_reply "$(crsctl stat res			|\
+		_reply "$(crsctl stat res			|\
 						grep -E "ora.*.svc$"	|\
 						sed "s/NAME=ora\.\(.*\)\.svc/\1/g" | xargs)"
 	else # return services for specified database.
 		typeset -r dbname=$(tr [:upper:] [:lower:]<<<"${COMP_WORDS[idbname]}")
-		_make_reply "$(crsctl stat res						|\
+		_reply "$(crsctl stat res						|\
 						grep -Ei "ora.$dbname.*.svc$"		|\
 						sed "s/NAME=ora\.${dbname}\.\(.*\)\.svc/\1/g" | xargs)"
 	fi
 }
 
-function _make_instance_list
+function _reply_with_instance_list
 {
 	typeset	-ri idbname=$(_get_dbname_index)
 	if [ $idbname -eq -1 ]
@@ -198,7 +196,7 @@ function _make_instance_list
 	then
 		if [ $(( SECONDS - tt_instance_list )) -lt 60 ]
 		then
-			_make_reply "$instance_list"
+			_reply "$instance_list"
 			return 0
 		fi
 		# cache to old.
@@ -211,9 +209,11 @@ function _make_instance_list
 	typeset -g	instance_list="$(eval $cmd)"
 	typeset	-gi	tt_instance_list=$SECONDS
 
-	_make_reply "$instance_list"
+	_reply "$instance_list"
 }
 
+#	$@	option_list
+#	return option_list without options already in used.
 function _remove_used_options
 {
 	typeset	option_list="$@"
@@ -229,19 +229,22 @@ function _remove_used_options
 	echo $option_list
 }
 
-function _make_reply_for_options
+#	$1 option_list
+#	do reply without options already in used.
+function _reply_for_options
 {
 	typeset	option_list="$@"
 
 	if [ $COMP_CWORD == $ifirstoption ]
 	then
-		_make_reply "$option_list"
+		_reply "$option_list"
 	else
-		_make_reply "$(_remove_used_options $option_list)"
+		_reply "$(_remove_used_options $option_list)"
 	fi
 }
 
-function _make_status_option_list_for
+#	reply for command status on object $1
+function _status_reply_on_object
 {
 	typeset	-r object_name="$1"
 
@@ -249,52 +252,52 @@ function _make_status_option_list_for
 		database)
 			if _is_cluster
 			then
-				_make_reply_for_options "-db -serverpool -thisversion -thishome
+				_reply_for_options "-db -serverpool -thisversion -thishome
 										-force -verbose"
 			else
-				_make_reply_for_options "-db -thisversion -thishome
+				_reply_for_options "-db -thisversion -thishome
 										-force -verbose"
 			fi
 			;;
 
 		instance)
-			_make_reply_for_options "-db -node -instance -force -verbose"
+			_reply_for_options "-db -node -instance -force -verbose"
 			;;
 
 		service)
-			_make_reply_for_options "-db -service -force -verbose"
+			_reply_for_options "-db -service -force -verbose"
 			;;
 
 		nodeapps)
-			_make_reply "-node"
+			_reply "-node"
 			;;
 
 		vip)
-			_make_reply_for_options "-node -vip -verbose"
+			_reply_for_options "-node -vip -verbose"
 			;;
 
 		listener)
-			_make_reply_for_options "-listener -verbose"
+			_reply_for_options "-listener -verbose"
 			;;
 
 		asm)
-			_make_reply_for_options "-detail -verbose"
+			_reply_for_options "-detail -verbose"
 			;;
 
 		scan|scan_listener)
-			_make_reply_for_options "-netnum -scannumber -all -verbose"
+			_reply_for_options "-netnum -scannumber -all -verbose"
 			;;
 
 		srvpool)
-			_log "todo _make_status_option_list_for $@"
+			_log "todo _status_reply_on_object $@"
 			;;
 
 		server)
-			_make_reply_for_options "-servers -detail"
+			_reply_for_options "-servers -detail"
 			;;
 
 		oc4j)
-			_make_reply_for_options "-node -verbose"
+			_reply_for_options "-node -verbose"
 			;;
 
 		rhpserver)
@@ -308,59 +311,59 @@ function _make_status_option_list_for
 		home)
 			if _is_cluster
 			then
-				_make_reply_for_options "-node -oraclehome -statefile"
+				_reply_for_options "-node -oraclehome -statefile"
 			else
-				_make_reply_for_options "-oraclehome -statefile"
+				_reply_for_options "-oraclehome -statefile"
 			fi
 			;;
 
 		filesystem)
-			_make_reply_for_options "-device -verbose"
+			_reply_for_options "-device -verbose"
 			;;
 
 		volume)
-			_make_reply_for_options "-volume -diskgroup -device -node -all"
+			_reply_for_options "-volume -diskgroup -device -node -all"
 			;;
 
 		diskgroup)
 			if _is_cluster
 			then
-				_make_reply_for_options "-diskgroup -node -detail -verbose"
+				_reply_for_options "-diskgroup -node -detail -verbose"
 			else
-				_make_reply_for_options "-diskgroup -detail -verbose"
+				_reply_for_options "-diskgroup -detail -verbose"
 			fi
 			;;
 
 		cvu)
-			_make_reply_for_options "-node"
+			_reply_for_options "-node"
 			;;
 
 		gns)
-			_make_reply_for_options "-node -verbose"
+			_reply_for_options "-node -verbose"
 			;;
 
 		mgmtdb)
-			_make_reply_for_options "-verbose"
+			_reply_for_options "-verbose"
 			;;
 
 		mgmtlsnr)
-			_make_reply_for_options "-verbose"
+			_reply_for_options "-verbose"
 			;;
 
 		exportfs)
-			_make_reply_for_options "-name -id"
+			_reply_for_options "-name -id"
 			;;
 
 		havip)
-			_make_reply_for_options "-id"
+			_reply_for_options "-id"
 			;;
 
 		mountfs)
-			_make_reply_for_options "-name"
+			_reply_for_options "-name"
 			;;
 
 		ons)
-			_make_reply_for_options "-verbose"
+			_reply_for_options "-verbose"
 			;;
 
 		*)
@@ -370,87 +373,95 @@ function _make_status_option_list_for
 	esac
 }
 
-function _complete_status_options_for
+#	next reply for command status on object $1 (after the first option)
+function _status_next_reply_on_object
 {
 	typeset	-r object_name="$1"
 
 	case "$prev_word" in
 		-diskgroup)
-			_make_diskgroup_list
+			_reply_with_diskgroup_list
 			;;
 
 		-db|-database)
-			_make_database_list
+			_reply_with_database_list
 			;;
 
 		-service|-s)
-			_make_service_list
+			_reply_with_service_list
 			;;
 
 		-listener)
-			_make_listener_list
+			_reply_with_listener_list
 			;;
 
 		-oraclehome)
-			_make_oracle_home_list
+			_reply_with_oracle_home_list
 			;;
 
 		-node|-servers)
-			_make_node_list
+			_reply_with_node_list
 			;;
 
 		-instance)
-			_make_instance_list
+			_reply_with_instance_list
 			;;
 
 		-vip)
-			_make_vip_list
+			_reply_with_vip_list
 			;;
 
 		-scannumber)
-			_make_reply "1 2 3"
+			_reply_with_reply "1 2 3"
 			;;
 
 		-netnum)
-			_make_network_list
+			_reply_with_network_list
 			;;
 
 		*)
-			_make_status_option_list_for $object_name
+			_status_reply_on_object $object_name
 			;;
 	esac
 }
 
-function _make_start_option_list_for
+#	reply for command start on object $1
+function _start_reply_on_object
 {
 	typeset	-r	object_name="$1"
 
 	case "$object_name" in
 		database)
-			# -node only for RAC On Node
-			# -eval for policy managed
-			_make_reply_for_options "-db -startoption -startconcurrency
-									-eval -verbose"
+			if _is_cluster
+			then
+				# -node only for RAC On Node
+				# -eval for policy managed
+				_reply_for_options "-db -startoption -startconcurrency
+										-eval -verbose"
+			else
+				_reply_for_options "-db -startoption -verbose"
+			fi
 			;;
 
 		*)
-			_log "_make_start_option_list_for $object_name : todo"
+			_log "_start_reply_on_object $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
 }
 
-function _complete_start_options_for
+#	next reply for command start on object $1 (after the first option)
+function _start_next_reply_on_object
 {
 	typeset	-r object_name="$1"
 
 	case "$prev_word" in
 		-db|-database)
-			_make_database_list
+			_reply_with_database_list
 			;;
 
 		-startconcurrency)
-			_make_node_number_list
+			_reply_with_node_number_list
 			;;
 
 		read)
@@ -458,53 +469,141 @@ function _complete_start_options_for
 			;;
 
 		-startoption)
-			_make_reply "open mount read"
+			_reply "open mount read"
 			;;
 
 		*)
-			_make_start_option_list_for $object_name
+			_start_reply_on_object $object_name
 			;;
 	esac
 }
 
-function _make_stop_option_list_for
+#	reply for command stop on object $1
+function _stop_reply_on_object
 {
 	typeset	-r	object_name="$1"
 
 	case "$object_name" in
 		database)
-			# -node only for RAC On Node
-			# -eval for policy managed
-			_make_reply_for_options "-db -stopoption -stopconcurrency
-									-force -eval -verbose"
+			if _is_cluster
+			then
+				# -node only for RAC On Node
+				# -eval for policy managed
+				_reply_for_options "-db -stopoption -stopconcurrency
+										-force -eval -verbose"
+			else
+				_reply_for_options "-db -stopoption -force -verbose"
+			fi
 			;;
 
 		*)
-			_log "_make_start_option_list_for $object_name : todo"
+			_log "_start_reply_on_object $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
 }
 
-function _complete_stop_options_for
+#	next reply for command stop on object $1 (after the first option)
+function _stop_next_reply_on_object
 {
 	typeset	-r object_name="$1"
 
 	case "$prev_word" in
 		-db|-database)
-			_make_database_list
+			_reply_with_database_list
 			;;
 
 		-stopconcurrency)
-			_make_node_number_list
+			_reply_with_node_number_list
 			;;
 
 		-stopoption)
-			_make_reply "normal transactional immediate abort"
+			_reply "normal transactional immediate abort"
 			;;
 
 		*)
-			_make_stop_option_list_for $object_name
+			_stop_reply_on_object $object_name
+			;;
+	esac
+}
+
+#	reply for command config on object $1
+function _config_reply_on_object
+{
+	typeset	-r	object_name="$1"
+
+	case "$object_name" in
+		database)
+			if _is_cluster
+			then
+				# TODO : to complete.
+				_reply_for_options "-db -all -verbose"
+			else
+				_reply_for_options "-db -all -verbose"
+			fi
+			;;
+
+		service)
+			if _is_cluster
+			then
+				# TODO : to complete.
+				_reply_for_options "-db -service -verbose"
+			else
+				_reply_for_options "-db -service -verbose"
+			fi
+			;;
+
+		asm)
+			if _is_cluster
+			then
+				# TODO : to complete.
+				_reply_for_options "-all"
+			else
+				_reply_for_options "-all"
+			fi
+			;;
+
+		listener)
+			if _is_cluster
+			then
+				# TODO : to complete.
+				_reply_for_options "-listener"
+			else
+				_reply_for_options "-listener"
+			fi
+			;;
+
+		ons)
+			COMP_REPLY=()
+			;;
+
+		*)
+			_log "_start_reply_on_object $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
+}
+
+#	next reply for command config on object $1 (after the first option)
+function _config_next_reply_on_object
+{
+	typeset	-r object_name="$1"
+
+	case "$prev_word" in
+		-db|-database)
+			_reply_with_database_list
+			;;
+
+		-s|-service)
+			_reply_with_service_list
+			;;
+
+		-listener)
+			_reply_with_listener_list
+			;;
+
+		*)
+			_config_reply_on_object $object_name
 			;;
 	esac
 }
@@ -525,23 +624,27 @@ function _srvctl_complete
 
 	if [[ "$prev_word" == "srvctl" ]]
 	then # srvctl TAB
-		_make_reply "${command_list}"
+		_reply "${command_list}"
 	elif [[ "$command_list" == *"$prev_word"* ]]
 	then # srvctl <command> TAB
-		_make_object_list
+		_reply_with_object_list
 	elif [[ "$object_list" == *"$prev_word"* ]]
 	then # srvctl <command> <object> TAB
 		case ${COMP_WORDS[icommand]} in
 			status)
-				_make_status_option_list_for ${COMP_WORDS[iobject]}
+				_status_reply_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			start)
-				_make_start_option_list_for ${COMP_WORDS[iobject]}
+				_start_reply_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			stop)
-				_make_stop_option_list_for ${COMP_WORDS[iobject]}
+				_stop_reply_on_object ${COMP_WORDS[iobject]}
+				;;
+
+			config)
+				_config_reply_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			*)
@@ -552,15 +655,19 @@ function _srvctl_complete
 	else
 		case ${COMP_WORDS[icommand]} in
 			status)
-				_complete_status_options_for ${COMP_WORDS[iobject]}
+				_status_next_reply_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			start)
-				_complete_start_options_for ${COMP_WORDS[iobject]}
+				_start_next_reply_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			stop)
-				_complete_stop_options_for ${COMP_WORDS[iobject]}
+				_stop_next_reply_on_object ${COMP_WORDS[iobject]}
+				;;
+
+			config)
+				_config_next_reply_on_object ${COMP_WORDS[iobject]}
 				;;
 
 			*)
