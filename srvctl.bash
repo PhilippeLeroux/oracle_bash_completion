@@ -51,7 +51,7 @@ function _is_cluster
 	[ $count_nodes -gt 1 ] && return 0 || return 1
 }
 
-#	build the reply : COMP_REPLY is set.
+#	build the reply : COMPREPLY is set.
 function _reply
 {
 	COMPREPLY=( $( compgen -W "$@" -- ${COMP_WORDS[COMP_CWORD]} ) )
@@ -124,27 +124,18 @@ function _reply_with_vip_list
 					sed "s/NAME=ora.\(.*\).vip/\1/g" | xargs)"
 }
 
-function _reply_with_network_list
+function _reply_with_network_number_list
 {
 	typeset -i count_net=$(crsctl stat res|grep -E "\.network$"|wc -l)
-	typeset list
-	for i in $( seq $count_net )
-	do
-		list="$list $i"
-	done
-	_reply "$list"
+
+	_reply "{1..$count_net}"
 }
 
 function _reply_with_node_number_list
 {
 	[ ! -v count_nodes ] && _is_cluster || true
 
-	typeset list
-	for i in $( seq $count_nodes )
-	do
-		list="$list $i"
-	done
-	_reply "$list"
+	_reply "{1..$count_nodes}"
 }
 
 function _reply_with_node_list
@@ -203,7 +194,7 @@ function _reply_with_instance_list
 	fi
 
 	typeset	cmd="srvctl status database -db ${COMP_WORDS[idbname]}"
-	cmd="$cmd | sed 's/Instance \(.*\) is running.*/\1/g' | xargs"
+	cmd="$cmd | sed 's/Instance \(.*\) is.*/\1/g' | xargs"
 	_log "cmd='$cmd'"
 
 	typeset -g	instance_list="$(eval $cmd)"
@@ -213,7 +204,7 @@ function _reply_with_instance_list
 }
 
 #	$@	option_list
-#	return option_list without options already in used.
+#	return option_list with used options removed.
 function _remove_used_options
 {
 	typeset	option_list="$@"
@@ -230,7 +221,7 @@ function _remove_used_options
 }
 
 #	$1 option_list
-#	do reply without options already in used.
+#	do reply remove options already in used.
 function _reply_for_options
 {
 	typeset	option_list="$@"
@@ -412,11 +403,11 @@ function _status_next_reply_on_object
 			;;
 
 		-scannumber)
-			_reply_with_reply "1 2 3"
+			_reply_for_options "1 2 3"
 			;;
 
 		-netnum)
-			_reply_with_network_list
+			_reply_with_network_number_list
 			;;
 
 		*)
