@@ -222,7 +222,7 @@ function _remove_used_options
 
 #	$1 option_list
 #	do reply remove options already in used.
-function _reply_for_options
+function _reply_with_options
 {
 	typeset	option_list="$@"
 
@@ -243,20 +243,20 @@ function _reply_for_status_on_object
 		database)
 			if _is_cluster
 			then
-				_reply_for_options "-db -serverpool -thisversion -thishome
+				_reply_with_options "-db -serverpool -thisversion -thishome
 										-force -verbose"
 			else
-				_reply_for_options "-db -thisversion -thishome
+				_reply_with_options "-db -thisversion -thishome
 										-force -verbose"
 			fi
 			;;
 
 		instance)
-			_reply_for_options "-db -node -instance -force -verbose"
+			_reply_with_options "-db -node -instance -force -verbose"
 			;;
 
 		service)
-			_reply_for_options "-db -service -force -verbose"
+			_reply_with_options "-db -service -force -verbose"
 			;;
 
 		nodeapps)
@@ -264,19 +264,19 @@ function _reply_for_status_on_object
 			;;
 
 		vip)
-			_reply_for_options "-node -vip -verbose"
+			_reply_with_options "-node -vip -verbose"
 			;;
 
 		listener)
-			_reply_for_options "-listener -verbose"
+			_reply_with_options "-listener -verbose"
 			;;
 
 		asm)
-			_reply_for_options "-detail -verbose"
+			_reply_with_options "-detail -verbose"
 			;;
 
 		scan|scan_listener)
-			_reply_for_options "-netnum -scannumber -all -verbose"
+			_reply_with_options "-netnum -scannumber -all -verbose"
 			;;
 
 		srvpool)
@@ -284,11 +284,11 @@ function _reply_for_status_on_object
 			;;
 
 		server)
-			_reply_for_options "-servers -detail"
+			_reply_with_options "-servers -detail"
 			;;
 
 		oc4j)
-			_reply_for_options "-node -verbose"
+			_reply_with_options "-node -verbose"
 			;;
 
 		rhpserver)
@@ -302,59 +302,59 @@ function _reply_for_status_on_object
 		home)
 			if _is_cluster
 			then
-				_reply_for_options "-node -oraclehome -statefile"
+				_reply_with_options "-node -oraclehome -statefile"
 			else
-				_reply_for_options "-oraclehome -statefile"
+				_reply_with_options "-oraclehome -statefile"
 			fi
 			;;
 
 		filesystem)
-			_reply_for_options "-device -verbose"
+			_reply_with_options "-device -verbose"
 			;;
 
 		volume)
-			_reply_for_options "-volume -diskgroup -device -node -all"
+			_reply_with_options "-volume -diskgroup -device -node -all"
 			;;
 
 		diskgroup)
 			if _is_cluster
 			then
-				_reply_for_options "-diskgroup -node -detail -verbose"
+				_reply_with_options "-diskgroup -node -detail -verbose"
 			else
-				_reply_for_options "-diskgroup -detail -verbose"
+				_reply_with_options "-diskgroup -detail -verbose"
 			fi
 			;;
 
 		cvu)
-			_reply_for_options "-node"
+			_reply_with_options "-node"
 			;;
 
 		gns)
-			_reply_for_options "-node -verbose"
+			_reply_with_options "-node -verbose"
 			;;
 
 		mgmtdb)
-			_reply_for_options "-verbose"
+			_reply_with_options "-verbose"
 			;;
 
 		mgmtlsnr)
-			_reply_for_options "-verbose"
+			_reply_with_options "-verbose"
 			;;
 
 		exportfs)
-			_reply_for_options "-name -id"
+			_reply_with_options "-name -id"
 			;;
 
 		havip)
-			_reply_for_options "-id"
+			_reply_with_options "-id"
 			;;
 
 		mountfs)
-			_reply_for_options "-name"
+			_reply_with_options "-name"
 			;;
 
 		ons)
-			_reply_for_options "-verbose"
+			_reply_with_options "-verbose"
 			;;
 
 		*)
@@ -403,7 +403,7 @@ function _next_reply_for_status_on_object
 			;;
 
 		-scannumber)
-			_reply_for_options "1 2 3"
+			_reply_with_options "1 2 3"
 			;;
 
 		-netnum)
@@ -427,10 +427,10 @@ function _reply_for_start_on_object
 			then
 				# -node only for RAC On Node
 				# -eval for policy managed
-				_reply_for_options "-db -startoption -startconcurrency
+				_reply_with_options "-db -startoption -startconcurrency
 										-eval -verbose"
 			else
-				_reply_for_options "-db -startoption -verbose"
+				_reply_with_options "-db -startoption -verbose"
 			fi
 			;;
 
@@ -480,10 +480,10 @@ function _reply_for_stop_on_object
 			then
 				# -node only for RAC On Node
 				# -eval for policy managed
-				_reply_for_options "-db -stopoption -stopconcurrency
+				_reply_with_options "-db -stopoption -stopconcurrency
 										-force -eval -verbose"
 			else
-				_reply_for_options "-db -stopoption -force -verbose"
+				_reply_with_options "-db -stopoption -force -verbose"
 			fi
 			;;
 
@@ -528,9 +528,9 @@ function _reply_for_config_on_object
 			if _is_cluster
 			then
 				# TODO : to complete.
-				_reply_for_options "-db -all -verbose"
+				_reply_with_options "-db -all -verbose"
 			else
-				_reply_for_options "-db -all -verbose"
+				_reply_with_options "-db -all -verbose"
 			fi
 			;;
 
@@ -538,9 +538,9 @@ function _reply_for_config_on_object
 			if _is_cluster
 			then
 				# TODO : to complete.
-				_reply_for_options "-db -service -verbose"
+				_reply_with_options "-db -service -verbose"
 			else
-				_reply_for_options "-db -service -verbose"
+				_reply_with_options "-db -service -verbose"
 			fi
 			;;
 
@@ -548,9 +548,9 @@ function _reply_for_config_on_object
 			if _is_cluster
 			then
 				# TODO : to complete.
-				_reply_for_options "-all"
+				_reply_with_options "-all"
 			else
-				_reply_for_options "-all"
+				_reply_with_options "-all"
 			fi
 			;;
 
@@ -558,9 +558,9 @@ function _reply_for_config_on_object
 			if _is_cluster
 			then
 				# TODO : to complete.
-				_reply_for_options "-listener"
+				_reply_with_options "-listener"
 			else
-				_reply_for_options "-listener"
+				_reply_with_options "-listener"
 			fi
 			;;
 
