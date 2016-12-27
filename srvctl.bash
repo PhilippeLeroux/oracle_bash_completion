@@ -438,24 +438,28 @@ function _reply_with_stopoption_list
 #	return 0 if reply done, else return 1.
 function _reply_for_option
 {
-	typeset		option="$1"; shift
-	typeset	-r	valid_options="$@"
+	typeset	-r	option="$1"; shift
+	typeset	-r	valid_options=( $@ )
 
-	if [[ "$valid_options" == *"$option"* ]]
-	then
-		case $option in
-			-s)
-				option="-service"
-				;;
-			-db)
-				option="-database"
-				;;
-		esac
-		_reply_with_${option:1}_list
-		return 0
-	else
-		return 1
-	fi
+	typeset w
+	for w in "${valid_options[@]}"
+	do
+		if [ "$option" == "$w" ]
+		then
+			case $option in
+				-s)
+					option="-service"
+					;;
+				-db)
+					option="-database"
+					;;
+			esac
+			_reply_with_${option:1}_list
+			return 0
+		fi
+	done
+
+	return 1
 }
 
 #	reply for command status on object $1
@@ -619,25 +623,23 @@ function _reply_for_cmd_start
 			fi
 			;;
 
-		instance)
-			if _is_cluster
-			then
-				_reply_with_options "-db -node -instance -startoption"
-			else # TODO
-				#_reply_with_options "-db -startoption"
-				_log "_reply_for_cmd_start $object_name instance : todo"
-			fi
+		instance) # cluster only
+			_reply_with_options "-db -node -instance -startoption"
 			;;
 
 		service)
 			if _is_cluster
 			then
 				typeset exclusive_options="-node -instance"
+				# Cannot add -service -startoption !
+				#	exclusive_options must became an associative array !
 				_reply_with_options "-db -service -serverpool -node -instance
 									-pq -global_override -startoption -eval
 									-verbose"
 			else
-				_log "_reply_for_cmd_start $object_name service : todo"
+				typeset exclusive_options="-service -startoption"
+				_reply_with_options "-db -service -startoption -global_override
+									verbose"
 			fi
 			;;
 
@@ -681,14 +683,9 @@ function _reply_for_cmd_stop
 			fi
 			;;
 
-		instance)
-			if _is_cluster
-			then
-				_reply_with_options "-db -node -instance -stopoption -force
-									-failover"
-			else
-				_log "_reply_for_cmd_stop $object_name instance : todo"
-			fi
+		instance)	# cluster only
+			_reply_with_options "-db -node -instance -stopoption -force
+								-failover"
 			;;
 
 		service)
@@ -698,7 +695,8 @@ function _reply_for_cmd_stop
 									-pq -global_override -force -noreplay
 									-eval -verbose"
 			else
-				_log "_reply_for_cmd_stop $object_name service : todo"
+				_reply_with_options "-db -service -global_override -force
+									-verbose"
 			fi
 			;;
 
@@ -715,6 +713,7 @@ function _next_reply_for_cmd_stop
 	typeset	-r	valid_options="-db -database -instance -service
 								-stopconcurrency -node -stopoption -serverpool"
 
+	_log "_next_reply_for_cmd_stop prev_word = '$prev_word'"
 	if ! _reply_for_option $prev_word "$valid_options"
 	then
 		if [ "$prev_word" == transactional ]
