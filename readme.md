@@ -15,3 +15,22 @@ You can download file `srvctl.bash` with following command :
 ```
 wget https://raw.githubusercontent.com/PhilippeLeroux/oracle_bash_completion/master/srvctl.bash
 ```
+
+--------------------------------------------------------------------------------
+
+### Tools
+Scripts to help me.
+
+* all_objects_for_cmd.sh
+	```
+	./all_objects_for_cmd.sh > /tmp/file.sh
+	```
+	Use to generate functions _reply_with_object_list_cluster & _reply_with_object_list_standalone
+
+* callback_func_for_command.sh (not tested, for future improvements)
+	```
+	./callback_func_for_command.sh config > /tmp/config.sh
+	```
+	Use to generate callback functions for command :
+	* \_reply_for_cmd_[command]
+	* \_next_reply_for_cmd_[command]
