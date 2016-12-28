@@ -41,7 +41,10 @@ typeset -r	command_list="enable disable start stop status add remove modify
 #	Work only with : export SRVCTL_LOG=yes
 function _log
 {
-	[ "$SRVCTL_LOG" == yes ] && echo "$@" >> /tmp/srvctl_completion.log || true
+	if [ "$SRVCTL_LOG" == yes ]
+	then # One log per user.
+		echo "$@" >> /tmp/srvctl_completion_${USER}.log
+	fi
 }
 
 #	return 0 if cluster, 1 if standalone server
@@ -286,6 +289,7 @@ function _reply_with_options
 		option_list="$(_remove_used_options $option_list)"
 		if [ -v exclusive_options ]
 		then
+			_log "_reply_with_options : exclusive options '$exclusive_options'"
 			option_list="$(_remove_exclusive_options $option_list)"
 		fi
 	fi
@@ -295,6 +299,7 @@ function _reply_with_options
 
 #	============================================================================
 #	Callback functions : _reply_with_[option]_list (option without dash)
+#	return values for an option.
 
 function _reply_with_database_list
 {
@@ -427,10 +432,35 @@ function _reply_with_stopoption_list
 	_reply "normal transactional immediate abort"
 }
 
+function _reply_with_statefile_list
+{	# user must provide a file name.
+	COMPREPLY=()
+}
+
+function _reply_with_volume_list
+{	# user must provide Volume name
+	COMPREPLY=()
+}
+
+function _reply_with_device_list
+{	# user must provide Volume device path
+	COMPREPLY=()
+}
+
+function _reply_with_name_list
+{	# user must provide a name
+	COMPREPLY=()
+}
+
+function _reply_with_id_list
+{	# user must provide unique ID for 'havip'
+	COMPREPLY=()
+}
+
 #	End callback functions.
 #	============================================================================
 
-#	$1 option name.
+#	$1 option name, must begin with a dash.
 #	$2 list of valid options.
 #		Must exist a callback function like _reply_with_[option]_list, the dash
 #		is removed from the option name before the call.
@@ -438,13 +468,17 @@ function _reply_with_stopoption_list
 #	return 0 if reply done, else return 1.
 function _reply_for_option
 {
-	typeset	-r	option="$1"; shift
-	typeset	-r	valid_options=( $@ )
+	typeset		option="$1"
+	[ "${option:0:1}" != "-" ] && return 1 || shift
 
+	typeset	-r	valid_options="$@"
+
+	_log "_reply_for_option : test if '$option' in '$valid_options'"
 	typeset w
-	for w in "${valid_options[@]}"
+	for w in $valid_options
 	do
-		if [ "$option" == "$w" ]
+		_log "_reply_for_option : $w == $option ?"
+		if [ "$w" == "$option" ]
 		then
 			case $option in
 				-s)
@@ -454,19 +488,25 @@ function _reply_for_option
 					option="-database"
 					;;
 			esac
+			_log "_reply_for_option : call _reply_with_${option:1}_list"
 			_reply_with_${option:1}_list
 			return 0
 		fi
 	done
 
+	_log "_reply_for_option : not found"
 	return 1
 }
 
-#	reply for command status on object $1
+#	============================================================================
+#	Callback functions for commands, 2 functions per command.
+
+#	reply for command status
 function _reply_for_cmd_status
 {
 	case "$object_name" in
 		database)
+			typeset exclusive_options="-db -serverpool -thisversion -thishome"
 			if _is_cluster
 			then
 				_reply_with_options "-db -serverpool -thisversion -thishome
@@ -478,6 +518,7 @@ function _reply_for_cmd_status
 			;;
 
 		instance)
+			typeset exclusive_options="-instance -node"
 			#	TODO : standalone CRS
 			_reply_with_options "-db -node -instance -force -verbose"
 			;;
@@ -503,6 +544,7 @@ function _reply_for_cmd_status
 			;;
 
 		scan|scan_listener)
+			typeset exclusive_options="-netnum -scannumber"
 			_reply_with_options "-netnum -scannumber -all -verbose"
 			;;
 
@@ -592,11 +634,12 @@ function _reply_for_cmd_status
 	esac
 }
 
-#	next reply for command status on object $1 (after the first option)
+#	next reply for command status (after the first option)
 function _next_reply_for_cmd_status
 {
 	typeset		exclusive_options="-node -instance"
 
+	# Provide all possible options, don't worry about previous options.
 	typeset	-r	valid_options="-diskgroup -db -database -service -s -listener
 						-oraclehome -node -servers -instance -vip -scannumber
 						-netnum"
@@ -607,7 +650,7 @@ function _next_reply_for_cmd_status
 	fi
 }
 
-#	reply for command start on object $1
+#	reply for command start
 function _reply_for_cmd_start
 {
 	case "$object_name" in
@@ -617,7 +660,7 @@ function _reply_for_cmd_start
 				# -node only for RAC On Node
 				# -eval for policy managed
 				_reply_with_options "-db -startoption -startconcurrency
-										-eval -verbose"
+									-eval -verbose"
 			else
 				_reply_with_options "-db -startoption -verbose"
 			fi
@@ -643,6 +686,112 @@ function _reply_for_cmd_start
 			fi
 			;;
 
+		asm)
+			if _is_cluster
+			then
+				_reply_with_options "-startoption -force -proxy -node"
+			else
+				_reply_with_options "-startoption -force"
+			fi
+			;;
+
+		listener)
+			if _is_cluster
+			then
+				_reply_with_options "-listener -force"
+			else
+				_reply_with_options "-listener"
+			fi
+			;;
+
+		diskgroup)
+			if _is_cluster
+			then
+				_reply_with_options "-diskgroup -node"
+			else
+				_reply_with_options "-diskgroup"
+			fi
+			;;
+
+		ons) # standalone only
+			_reply_with_options "-verbose"
+			;;
+
+		home)
+			if _is_cluster
+			then
+				_reply_with_options "-oraclehome -statefile -node"
+			else
+				_reply_with_options "-oraclehome -statefile"
+			fi
+			;;
+
+		exportfs)
+			_reply_with_options "-name -id"
+			;;
+
+		mgmtlsnr)
+			_reply_with_options "-node"
+			;;
+
+		rhpclient)
+			_reply "-node"
+			;;
+
+		cvu)
+			_reply_with_options "-node"
+			;;
+
+		filesystem)
+			_reply_with_options "-device -node"
+			;;
+
+		mountfs)
+			_reply_with_options "-name -node"
+			;;
+
+		rhpserver)
+			_reply "-node"
+			;;
+
+		vip)
+			_reply_with_options "-node -vip -netnum -relocate -verbose"
+			;;
+
+		gns)
+			_reply_with_options "-loglevel -node -verbose"
+			;;
+
+		nodeapps)
+			_reply_with_options "-node -adminhelper -onsonly -verbose"
+			;;
+
+		scan)
+			typeset exclusive_options="-netnum -scannumber"
+			_reply_with_options "-netnum -scannumber -node"
+			;;
+
+		volume)
+			_reply_with_options "-volume -diskgroup -device -node"
+			;;
+
+		havip)
+			_reply_with_options "-id -node"
+			;;
+
+		mgmtdb)
+			_reply_with_options "-startoption -node"
+			;;
+
+		oc4j)
+			_reply_with_options "-node -verbose"
+			;;
+
+		scan_listener)
+			typeset exclusive_options="-netnum -scannumber"
+			_reply_with_options "-netnum -scannumber -node"
+			;;
+
 		*)
 			_log "_reply_for_cmd_start $object_name : todo"
 			COMPREPLY=()
@@ -650,24 +799,34 @@ function _reply_for_cmd_start
 	esac
 }
 
-#	next reply for command start on object $1 (after the first option)
+#	next reply for command start (after the first option)
 function _next_reply_for_cmd_start
 {
+	# Provide all possible options, don't worry about previous options.
 	typeset	-r	valid_options="-db -database -instance -service
-								-startconcurrency -node -startoption"
+								-startconcurrency -node -startoption
+								-oraclehome -listener -diskgroup -vip -netnum
+								-scannumber -statefile -volume -device
+								-name -id"
 
 	if ! _reply_for_option $prev_word "$valid_options"
 	then
-		if [ "$prev_word" == read ]
-		then
-			COMPREPLY=( only )
-		else
-			_reply_for_cmd_start
-		fi
+		case "$prev_word" in
+			read)
+				COMPREPLY=( only )
+				;;
+
+			-loglevel) # Callback ?
+				_reply_with_options "{1..6}"
+				;;
+
+			*)
+				_reply_for_cmd_start
+		esac
 	fi
 }
 
-#	reply for command stop on object $1
+#	reply for command stop
 function _reply_for_cmd_stop
 {
 	case "$object_name" in
@@ -677,7 +836,7 @@ function _reply_for_cmd_stop
 				# -node only for RAC On Node
 				# -eval for policy managed
 				_reply_with_options "-db -stopoption -stopconcurrency
-										-force -eval -verbose"
+									-force -eval -verbose"
 			else
 				_reply_with_options "-db -stopoption -force -verbose"
 			fi
@@ -700,37 +859,153 @@ function _reply_for_cmd_stop
 			fi
 			;;
 
+		asm)
+			if _is_cluster
+			then
+				_reply_with_options "-stopoption -force -proxy -node"
+			else
+				_reply_with_options "-stopoption -force"
+			fi
+			;;
+
+		listener)
+			if _is_cluster
+			then
+				_reply_with_options "-listener -node -force"
+			else
+				_reply_with_options "-listener -force"
+			fi
+			;;
+
+		diskgroup)
+			if _is_cluster
+			then
+				_reply_with_options "-diskgroup -force -node"
+			else
+				_reply_with_options "-diskgroup -force"
+			fi
+			;;
+
+		ons) # only on standalone.
+			_reply_with_options "-verbose"
+			;;
+
+		home)
+			if _is_cluster
+			then
+				_reply_with_options "-oraclehome -statefile -stopoption -force
+									-node"
+			else
+				_reply_with_options "-oraclehome -statefile -stopoption -force"
+			fi
+			;;
+
+		exportfs)
+			_reply_with_options "-name -id -force"
+			;;
+
+		mgmtlsnr)
+			_reply_with_options "-node -force"
+			;;
+
+		rhpclient)
+			COMPRELY=()
+			;;
+
+		cvu)
+			_reply_with_options "-force"
+			;;
+
+		filesystem)
+			_reply_with_options "-device -node -force"
+			;;
+
+		mountfs)
+			_reply_with_options "-name -node -force"
+			;;
+
+		rhpserver)
+			COMPRELY=()
+			;;
+
+		vip)
+			_reply_with_options "-node -vip -netnum -relocate -force -verbose"
+			;;
+
+		gns)
+			_reply_with_options "-node -force -verbose"
+			;;
+
+		nodeapps)
+			_reply_with_options "-node -relocate -adminhelper -onsonly -force
+								-verbose"
+			;;
+
+		scan)
+			typeset exclusive_options="-netnum -scannumber"
+			_reply_with_options "-netnum -scannumber -force"
+			;;
+
+		volume)
+			_reply_with_options "-volume -diskgroup -device -node -force"
+			;;
+
+		havip)
+			_reply_with_options "-id -node -force"
+			;;
+
+		mgmtdb)
+			_reply_with_options "-stopoption -force"
+			;;
+
+		oc4j)
+			_reply_with_options "-force -verbose"
+			;;
+
+		scan_listener)
+			typeset exclusive_options="-netnum -scannumber"
+			_reply_with_options "-netnum -scannumber -force"
+			;;
+
 		*)
-			_log "_reply_for_cmd_start $object_name : todo"
+			_log "_reply_for_cmd_stop $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
 }
 
-#	next reply for command stop on object $1 (after the first option)
+#	next reply for command stop (after the first option)
 function _next_reply_for_cmd_stop
 {
+	# Provide all possible options, don't worry about previous options.
 	typeset	-r	valid_options="-db -database -instance -service
-								-stopconcurrency -node -stopoption -serverpool"
+								-stopconcurrency -node -stopoption -serverpool
+								-oraclehome -listener -diskgroup -vip -netnum
+								-scannumber -statefile -volume -device
+								-name -id"
 
-	_log "_next_reply_for_cmd_stop prev_word = '$prev_word'"
+	_log "_next_reply_for_cmd_stop : prev_word = '$prev_word'"
 	if ! _reply_for_option $prev_word "$valid_options"
 	then
-		if [ "$prev_word" == transactional ]
-		then
-			case "$object_name" in
-				instance|database)
-					_reply "local"
-					return 0
-					;;
-			esac
-		fi
+		case "$prev_word" in
+			transactional)
+				case "$object_name" in
+					instance|database)
+						_reply "local"
+						;;
+					*)
+						_reply_for_cmd_stop
+						;;
+				esac
+				;;
 
-		_reply_for_cmd_stop
+			*)
+				_reply_for_cmd_stop
+		esac
 	fi
 }
 
-#	reply for command config on object $1
+#	reply for command config
 function _reply_for_cmd_config
 {
 	case "$object_name" in
@@ -764,6 +1039,7 @@ function _reply_for_cmd_config
 		listener)
 			if _is_cluster
 			then
+				typeset exclusive_options="-listener -asmlistener -leaflistener"
 				_reply_with_options "-listener -asmlistener -leaflistener -all"
 			else
 				_reply_with_options "-listener"
@@ -774,8 +1050,77 @@ function _reply_for_cmd_config
 			COMP_REPLY=()
 			;;
 
-		ons)
+		ons) # only standalone
 			COMP_REPLY=()
+			;;
+
+		filesystem)
+			_reply_with_options "-device"
+			;;
+
+		mgmtlsnr)
+			_reply_with_options "-all"
+			;;
+
+		oc4j)
+			COMPREPLY=()
+			;;
+
+		scan_listener)
+			typeset exclusive_options="-netnum -scannumber"
+			_reply_with_options "-netnum -scannumber -all"
+			;;
+
+		volume)
+			_reply_with_options "-volume -diskgroup -device"
+			;;
+
+		gns)
+			_reply_with_options "-detail -subdomain -multicastport -node -port
+								-network -status -version -query -list
+								-clusterguid -clustername -clustertype
+								-loglevel -verbose"
+			;;
+
+		mountfs)
+			_reply_with_options "-name"
+			;;
+
+		rhpclient)
+			COMPRELY=()
+			;;
+
+		network)
+			_reply_with_options "-netnum"
+			;;
+
+		rhpserver)
+			COMPRELY=()
+			;;
+
+		srvpool)
+			_reply_with_options "-serverpool"
+			;;
+
+		exportfs)
+			_reply_with_options "-name -id"
+			;;
+
+		mgmtdb)
+			_reply_with_options "-verbose -all"
+			;;
+
+		nodeapps)
+			_reply_with_options "-viponly -onsonly"
+			;;
+
+		scan)
+			typeset exclusive_options="-netnum -scannumber"
+			_reply_with_options "-netnum -scannumber -all"
+			;;
+
+		vip)
+			_reply_with_options "-node -vip"
 			;;
 
 		*)
@@ -785,14 +1130,29 @@ function _reply_for_cmd_config
 	esac
 }
 
-#	next reply for command config on object $1 (after the first option)
+#	next reply for command config (after the first option)
 function _next_reply_for_cmd_config
 {
-	if ! _reply_for_option $prev_word "-db -database -s -service -listener"
+	typeset	-r	valid_options="db -database -s -service -listener -device
+								-netnum -scannumber -volume -diskgroup -device
+								-name -netnum -name -id -vip"
+
+	if ! _reply_for_option $prev_word "$valid_options"
 	then
-		_reply_for_cmd_config
+		case "$prev_word" in
+			-serverpool)	# Must provide server pool name
+				COMPREPLY=()
+				;;
+
+			*)
+			_reply_for_cmd_config
+			;;
+		esac
 	fi
 }
+
+#	End callback functions for command.
+#	============================================================================
 
 function _srvctl_complete
 {
@@ -837,7 +1197,7 @@ function _srvctl_complete
 		fi
 	fi
 
-	_log "return : '${COMPREPLY[*]}'"
+	_log "COMPREPLY : '${COMPREPLY[*]}'"
 }
 
 complete -F _srvctl_complete srvctl

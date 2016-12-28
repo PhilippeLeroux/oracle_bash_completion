@@ -4,13 +4,14 @@ Supported commands :
 
 * srvctl \<command\> \<object\> option1, option2, ...
 	* status : full support.
-	* config : support for standalone.
-	* start database : must be tested on policy managed (-eval) & One Node (-node).
-	* stop database : must be tested on policy managed (-eval).
-
-* crsctl
-
-	todo
+	* config : full support.
+	* start : Must be tested on policy managed (-eval) & One Node (-node).
+	* stop : Must be tested on policy managed (-eval).
 
 ### Installation
-Copy files to `/etc/bash_completion.d/`
+Copy file `srvctl.bash` to `/etc/bash_completion.d`
+
+You can download file `srvctl.bash` with following command :
+```
+wget https://raw.githubusercontent.com/PhilippeLeroux/oracle_bash_completion/master/srvctl.bash
+```
