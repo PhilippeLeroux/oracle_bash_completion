@@ -34,6 +34,13 @@ typeset	-ri	ifirstoption=3
 typeset -r	command_list="enable disable start stop status add remove modify
 						update getenv setenv unsetenv config upgrade downgrade"
 
+typeset -A	exclusive_options
+exclusive_options+=( [list_1]="-db -serverpool -thisversion -thishome" )
+exclusive_options+=( [list_2]="-instance -node" )
+exclusive_options+=( [list_3]="-netnum -scannumber" )
+exclusive_options+=( [list_4]="-service -startoption" )
+exclusive_options+=( [list_5]="-listener -asmlistener -leaflistener" )
+
 # Global variables built dynamically
 #	object_list : contain all objects.
 #	count_nodes : number of nodes.
@@ -252,25 +259,29 @@ function _option_is_used
 #	Ex : srvctl stop service -db db_name [-node | -instance]
 #	You can use -node or -instance, together it's an error.
 #
-#	exclusive_options must contains the exclusives options.
+#	Variable exclusive_options is used.
 #	$1 list options
 #	print new list options to stdout.
 function _remove_exclusive_options
 {
 	typeset	option_list="$@"
 
-	typeset option
-	for option in $exclusive_options
+	for id in ${!exclusive_options[@]}
 	do
-		if _option_is_used "$option"
-		then
-			typeset o2r	# option to removed.
-			for o2r in ${exclusive_options/$option/}
-			do	# cannot use option $o2r with $option, remove it.
-				option_list=${option_list/$o2r/}
-			done
-			break # no need to iterate more.
-		fi
+		typeset exlu_opts=${exclusive_options[$id]}
+		typeset option
+		for option in $exlu_opts
+		do
+			if _option_is_used "$option"
+			then
+				typeset o2r	# option to removed.
+				for o2r in ${exlu_opts/$option/}
+				do	# cannot use option $o2r with $option, remove it.
+					option_list=${option_list/$o2r/}
+				done
+				break
+			fi
+		done
 	done
 
 	echo "$option_list"
@@ -279,19 +290,16 @@ function _remove_exclusive_options
 #	$1 option_list
 #	before to reply :
 #		- remove options already in use.
-#		- if exclusive_options is set, removes the exclusives options.
+#		- remove incompatible options (from exclusive_options)
 function _reply_with_options
 {
 	typeset	option_list="$@"
 
 	if [ $COMP_CWORD -ne $ifirstoption ]
 	then
+		# Call order is important !
+		option_list="$(_remove_exclusive_options $option_list)"
 		option_list="$(_remove_used_options $option_list)"
-		if [ -v exclusive_options ]
-		then
-			_log "_reply_with_options : exclusive options '$exclusive_options'"
-			option_list="$(_remove_exclusive_options $option_list)"
-		fi
 	fi
 
 	_reply "$option_list"
@@ -404,7 +412,7 @@ function _reply_with_instance_list
 
 	if [ -v instance_list ]
 	then
-		if [ $(( SECONDS - tt_instance_list )) -lt 60 ]
+		if [ $(( SECONDS - tt_instance_list )) -lt $(( 60 * 10 )) ]
 		then
 			_reply "$instance_list"
 			return 0
@@ -457,8 +465,19 @@ function _reply_with_id_list
 	COMPREPLY=()
 }
 
+function _reply_with_serverpool_list
+{
+	# Must provide server pool name
+	COMPREPLY=()
+}
+
 #	End callback functions.
 #	============================================================================
+
+function _function_exists
+{
+	type -t "$1" >/dev/null 2>&1
+}
 
 #	$1 option name, must begin with a dash.
 #	$2 list of valid options.
@@ -469,44 +488,38 @@ function _reply_with_id_list
 function _reply_for_option
 {
 	typeset		option="$1"
-	[ "${option:0:1}" != "-" ] && return 1 || shift
+	[ "${option:0:1}" != "-" ] && return 1 || true
 
-	typeset	-r	valid_options="$@"
+	case $option in
+		-s)
+			option="-service"
+			;;
+		-db)
+			option="-database"
+			;;
+	esac
 
-	_log "_reply_for_option : test if '$option' in '$valid_options'"
-	typeset w
-	for w in $valid_options
-	do
-		_log "_reply_for_option : $w == $option ?"
-		if [ "$w" == "$option" ]
-		then
-			case $option in
-				-s)
-					option="-service"
-					;;
-				-db)
-					option="-database"
-					;;
-			esac
-			_log "_reply_for_option : call _reply_with_${option:1}_list"
-			_reply_with_${option:1}_list
-			return 0
-		fi
-	done
+	if _function_exists "_reply_with_${option:1}_list"
+	then
+		_reply_with_${option:1}_list
+		return 0
+	fi
 
 	_log "_reply_for_option : not found"
 	return 1
 }
 
 #	============================================================================
-#	Callback functions for commands, 2 functions per command.
+#	Callback functions for commands
+#		_reply_for_cmd_<command_name>
+#		_next_reply_for_cmd<command_name>
+#			only if generic function _next_reply_for_cmd is not suitable.
 
 #	reply for command status
 function _reply_for_cmd_status
 {
 	case "$object_name" in
 		database)
-			typeset exclusive_options="-db -serverpool -thisversion -thishome"
 			if _is_cluster
 			then
 				_reply_with_options "-db -serverpool -thisversion -thishome
@@ -518,7 +531,6 @@ function _reply_for_cmd_status
 			;;
 
 		instance)
-			typeset exclusive_options="-instance -node"
 			#	TODO : standalone CRS
 			_reply_with_options "-db -node -instance -force -verbose"
 			;;
@@ -544,7 +556,6 @@ function _reply_for_cmd_status
 			;;
 
 		scan|scan_listener)
-			typeset exclusive_options="-netnum -scannumber"
 			_reply_with_options "-netnum -scannumber -all -verbose"
 			;;
 
@@ -634,22 +645,6 @@ function _reply_for_cmd_status
 	esac
 }
 
-#	next reply for command status (after the first option)
-function _next_reply_for_cmd_status
-{
-	typeset		exclusive_options="-node -instance"
-
-	# Provide all possible options, don't worry about previous options.
-	typeset	-r	valid_options="-diskgroup -db -database -service -s -listener
-						-oraclehome -node -servers -instance -vip -scannumber
-						-netnum"
-
-	if ! _reply_for_option "$prev_word" "$valid_options"
-	then
-		_reply_for_cmd_status
-	fi
-}
-
 #	reply for command start
 function _reply_for_cmd_start
 {
@@ -673,14 +668,10 @@ function _reply_for_cmd_start
 		service)
 			if _is_cluster
 			then
-				typeset exclusive_options="-node -instance"
-				# Cannot add -service -startoption !
-				#	exclusive_options must became an associative array !
 				_reply_with_options "-db -service -serverpool -node -instance
 									-pq -global_override -startoption -eval
 									-verbose"
 			else
-				typeset exclusive_options="-service -startoption"
 				_reply_with_options "-db -service -startoption -global_override
 									verbose"
 			fi
@@ -767,7 +758,6 @@ function _reply_for_cmd_start
 			;;
 
 		scan)
-			typeset exclusive_options="-netnum -scannumber"
 			_reply_with_options "-netnum -scannumber -node"
 			;;
 
@@ -788,7 +778,6 @@ function _reply_for_cmd_start
 			;;
 
 		scan_listener)
-			typeset exclusive_options="-netnum -scannumber"
 			_reply_with_options "-netnum -scannumber -node"
 			;;
 
@@ -799,17 +788,12 @@ function _reply_for_cmd_start
 	esac
 }
 
-#	next reply for command start (after the first option)
+#	Exceptions are :
+#		on mount reply read
+#		on -loglevel reply {1..6}
 function _next_reply_for_cmd_start
 {
-	# Provide all possible options, don't worry about previous options.
-	typeset	-r	valid_options="-db -database -instance -service
-								-startconcurrency -node -startoption
-								-oraclehome -listener -diskgroup -vip -netnum
-								-scannumber -statefile -volume -device
-								-name -id"
-
-	if ! _reply_for_option $prev_word "$valid_options"
+	if ! _reply_for_option $prev_word
 	then
 		case "$prev_word" in
 			read)
@@ -942,7 +926,6 @@ function _reply_for_cmd_stop
 			;;
 
 		scan)
-			typeset exclusive_options="-netnum -scannumber"
 			_reply_with_options "-netnum -scannumber -force"
 			;;
 
@@ -963,7 +946,6 @@ function _reply_for_cmd_stop
 			;;
 
 		scan_listener)
-			typeset exclusive_options="-netnum -scannumber"
 			_reply_with_options "-netnum -scannumber -force"
 			;;
 
@@ -974,18 +956,11 @@ function _reply_for_cmd_stop
 	esac
 }
 
-#	next reply for command stop (after the first option)
+#	Exceptions are :
+#		on transactional for object instance|database reply local
 function _next_reply_for_cmd_stop
 {
-	# Provide all possible options, don't worry about previous options.
-	typeset	-r	valid_options="-db -database -instance -service
-								-stopconcurrency -node -stopoption -serverpool
-								-oraclehome -listener -diskgroup -vip -netnum
-								-scannumber -statefile -volume -device
-								-name -id"
-
-	_log "_next_reply_for_cmd_stop : prev_word = '$prev_word'"
-	if ! _reply_for_option $prev_word "$valid_options"
+	if ! _reply_for_option $prev_word
 	then
 		case "$prev_word" in
 			transactional)
@@ -1039,7 +1014,6 @@ function _reply_for_cmd_config
 		listener)
 			if _is_cluster
 			then
-				typeset exclusive_options="-listener -asmlistener -leaflistener"
 				_reply_with_options "-listener -asmlistener -leaflistener -all"
 			else
 				_reply_with_options "-listener"
@@ -1067,7 +1041,6 @@ function _reply_for_cmd_config
 			;;
 
 		scan_listener)
-			typeset exclusive_options="-netnum -scannumber"
 			_reply_with_options "-netnum -scannumber -all"
 			;;
 
@@ -1115,7 +1088,6 @@ function _reply_for_cmd_config
 			;;
 
 		scan)
-			typeset exclusive_options="-netnum -scannumber"
 			_reply_with_options "-netnum -scannumber -all"
 			;;
 
@@ -1130,29 +1102,133 @@ function _reply_for_cmd_config
 	esac
 }
 
-#	next reply for command config (after the first option)
-function _next_reply_for_cmd_config
+function _reply_for_cmd_enable
 {
-	typeset	-r	valid_options="db -database -s -service -listener -device
-								-netnum -scannumber -volume -diskgroup -device
-								-name -netnum -name -id -vip"
-
-	if ! _reply_for_option $prev_word "$valid_options"
-	then
-		case "$prev_word" in
-			-serverpool)	# Must provide server pool name
-				COMPREPLY=()
-				;;
-
-			*)
-			_reply_for_cmd_config
+	case "$object_name" in
+		database)
+			if _is_cluster
+			then
+				_reply_with_options "-db -node"
+			else # TODO : to validate.
+				_reply_with_options "-db"
+			fi
 			;;
-		esac
-	fi
+
+		instance)
+			if _is_cluster
+			then
+				_reply_with_options "-instance -node"
+			else # TODO : to validate.
+				_reply_with_options "-instance"
+			fi
+			;;
+
+		service)
+			if _is_cluster
+			then
+				_reply_with_options "-db -service -instance -node
+									-global_override"
+			else # TODO : to validate.
+				_reply_with_options "-db -service -global_override"
+			fi
+			;;
+
+		asm) # TODO : standalone
+			_reply_with_options "-proxy -node"
+			;;
+
+		listener) # TODO : standalon
+			_reply_with_options "-listener -node"
+			;;
+
+		nodeapps)
+			_reply_with_options "-adminhelper -verbose"
+			;;
+
+		vip)
+			_reply_with_options "-vip -verbose"
+			;;
+
+		scan)
+			_reply_with_options "-netnum -scannumber"
+			;;
+
+		scan_listener)
+			_reply_with_options "-netnum -scannumber"
+			;;
+
+		oc4j)
+			_reply_with_options "-node -verbose"
+			;;
+
+		rhpserver)
+			_reply_with_options "-node"
+			;;
+
+		rhpclient)
+			_reply_with_options "-node"
+			;;
+
+		filesystem)
+			_reply_with_options "-device"
+			;;
+
+		volume) # TODO : standalon
+			_reply_with_options "-volume -diskgroup -device -node"
+			;;
+
+		diskgroup)
+			_reply_with_options "-diskgroup -node"
+			;;
+
+		gns)
+			_reply_with_options "-node -verbose"
+			;;
+
+		cvu)
+			_reply_with_options "-node"
+			;;
+
+		mgmtdb)
+			_reply_with_options "-node"
+			;;
+
+		mgmtlsnr)
+			_reply_with_options "-node"
+			;;
+
+		exportfs)
+			_reply_with_options "-name"
+			;;
+
+		havip)
+			_reply_with_options "-id -node"
+			;;
+
+		mountfs)
+			_reply_with_options "-name -node"
+			;;
+
+		*)
+			_log "_reply_for_cmd_enable $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
 }
 
 #	End callback functions for command.
 #	============================================================================
+
+function _next_reply_for_cmd
+{
+	if _function_exists _next_reply_for_cmd_$command
+	then
+		_next_reply_for_cmd_$command
+	elif ! _reply_for_option "$prev_word"
+	then
+		_reply_for_cmd_$command
+	fi
+}
 
 function _srvctl_complete
 {
@@ -1161,8 +1237,6 @@ function _srvctl_complete
 	typeset -r	command=${COMP_WORDS[icommand]}
 	typeset -r	object_name=${COMP_WORDS[iobject]}
 	#	########################################################################
-
-	typeset -r	supported_cmd="status start stop config"
 
 	#	srvctl <command> <object> firstoption ...
 	_log
@@ -1182,16 +1256,16 @@ function _srvctl_complete
 		_reply_with_object_list
 	elif [[ "$object_list" == *"$prev_word"* ]]
 	then # srvctl <command> <object> TAB
-		if [[ "$supported_cmd" == *"$command"* ]]
+		if _function_exists _reply_for_cmd_${command}
 		then
 			_reply_for_cmd_${command}
 		else
 			_log "TODO : command '$command' not supported."
 		fi
 	else # srvctl <command> <object> opt1 opt2 ... TAB
-		if [[ "$supported_cmd" == *"$command"* ]]
+		if _function_exists _reply_for_cmd_${command}
 		then
-			_next_reply_for_cmd_${command}
+			_next_reply_for_cmd
 		else
 			_log "TODO : command '$command' not supported."
 		fi
