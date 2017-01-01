@@ -1,0 +1,84 @@
+#!/bin/bash
+# vim: ts=4:sw=4
+
+. ~/plescripts/plelib.sh
+. ~/plescripts/cfglib.sh
+. ~/plescripts/global.cfg
+EXEC_CMD_ACTION=EXEC
+
+typeset -r ME=$0
+typeset -r str_usage=\
+"Usage : $ME ...."
+
+script_banner $ME $*
+
+typeset db=undef
+typeset all=no
+
+while [ $# -ne 0 ]
+do
+	case $1 in
+		-emul)
+			EXEC_CMD_ACTION=NOP
+			shift
+			;;
+
+		-db=*)
+			db=${1##*=}
+			shift
+			;;
+
+		-all)
+			all=yes
+			shift
+			;;
+
+		-h|-help|help)
+			info "$str_usage"
+			LN
+			exit 1
+			;;
+
+		*)
+			error "Arg '$1' invalid."
+			LN
+			info "$str_usage"
+			exit 1
+			;;
+	esac
+done
+
+[[ $db == undef && x"$ID_DB" != x ]] && db=$ID_DB
+exit_if_param_undef db	"$str_usage"
+
+cfg_exists $db
+
+typeset	-ri	max_nodes=$(cfg_max_nodes $db)
+
+#	$1 script to copy.
+function copy
+{
+	typeset	-r script_name=$1
+	exec_cmd scp	./$script_name	\
+					root@$cfg_server_name:/etc/bash_completion.d/$script_name
+}
+
+function copy_helper_script
+{
+	typeset	-r script_name=$1
+	exec_cmd scp	./$script_name	\
+					oracle@$cfg_server_name:$script_name
+	exec_cmd scp	./$script_name	\
+					grid@$cfg_server_name:$script_name
+}
+
+for node in $( seq $max_nodes )
+do
+	cfg_load_node_info $db $node
+	copy srvctl.bash 
+	if [ $all == yes ]
+	then
+		copy_helper_script callback_func_for_command.sh
+	fi
+	LN
+done

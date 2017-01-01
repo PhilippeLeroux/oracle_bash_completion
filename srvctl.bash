@@ -22,29 +22,6 @@
 #		COMPREPLY	is a list of replies.
 #	============================================================================
 
-#	srvctl <command> <object> [<options>]
-#	COMP_WORD[0] == srvctl
-#	COMP_WORD[1] == command
-#	COMP_WORD[2] == object
-#	COMP_WORD[3] == first option
-typeset	-ri	icommand=1
-typeset	-ri	iobject=2
-typeset	-ri	ifirstoption=3
-
-typeset -r	command_list="enable disable start stop status add remove modify
-						update getenv setenv unsetenv config upgrade downgrade"
-
-typeset -A	exclusive_options
-exclusive_options+=( [list_1]="-db -serverpool -thisversion -thishome" )
-exclusive_options+=( [list_2]="-instance -node" )
-exclusive_options+=( [list_3]="-netnum -scannumber" )
-exclusive_options+=( [list_4]="-service -startoption" )
-exclusive_options+=( [list_5]="-listener -asmlistener -leaflistener" )
-
-# Global variables built dynamically
-#	object_list : contain all objects.
-#	count_nodes : number of nodes.
-
 #	Work only with : export SRVCTL_LOG=yes
 function _log
 {
@@ -259,12 +236,18 @@ function _option_is_used
 #	Ex : srvctl stop service -db db_name [-node | -instance]
 #	You can use -node or -instance, together it's an error.
 #
-#	Variable exclusive_options is used.
 #	$1 list options
 #	print new list options to stdout.
 function _remove_exclusive_options
 {
 	typeset	option_list="$@"
+
+	typeset -A	exclusive_options
+	exclusive_options+=( [list_1]="-db -serverpool -thisversion -thishome" )
+	exclusive_options+=( [list_2]="-instance -node" )
+	exclusive_options+=( [list_3]="-netnum -scannumber" )
+	exclusive_options+=( [list_4]="-service -startoption" )
+	exclusive_options+=( [list_5]="-listener -asmlistener -leaflistener" )
 
 	for id in ${!exclusive_options[@]}
 	do
@@ -290,7 +273,7 @@ function _remove_exclusive_options
 #	$1 option_list
 #	before to reply :
 #		- remove options already in use.
-#		- remove incompatible options (from exclusive_options)
+#		- remove incompatible options.
 function _reply_with_options
 {
 	typeset	option_list="$@"
@@ -505,7 +488,7 @@ function _reply_for_option
 		return 0
 	fi
 
-	_log "_reply_for_option : not found"
+	_log "_reply_for_option : $option not found"
 	return 1
 }
 
@@ -1232,11 +1215,22 @@ function _next_reply_for_cmd
 
 function _srvctl_complete
 {
-	#	Variables read by all called functions		############################
+	#	srvctl <command> <object> [<options>]
+	#	COMP_WORD[0] == srvctl
+	#	COMP_WORD[1] == command
+	#	COMP_WORD[2] == object
+	#	COMP_WORD[3] == first option
+	typeset	-ri	icommand=1
+	typeset	-ri	iobject=2
+	typeset	-ri	ifirstoption=3
+
+	typeset -r	command_list="enable disable start stop status add remove modify
+							update getenv setenv unsetenv config upgrade
+							downgrade"
+
 	typeset	-r	prev_word="${COMP_WORDS[COMP_CWORD-1]}"
 	typeset -r	command=${COMP_WORDS[icommand]}
 	typeset -r	object_name=${COMP_WORDS[iobject]}
-	#	########################################################################
 
 	#	srvctl <command> <object> firstoption ...
 	_log

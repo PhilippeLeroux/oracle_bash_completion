@@ -37,3 +37,7 @@ Scripts to help me.
 	Create callback function for a command : \_reply_for_cmd_[command]
 
 	For command `config` : `./callback_func_for_command.sh config > /tmp/config.sh`
+
+* copy_to
+
+	Copy the scripts to my demo servers.
