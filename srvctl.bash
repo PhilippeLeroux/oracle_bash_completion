@@ -202,6 +202,20 @@ function _reply_with_object_list
 	_reply "$object_list"
 }
 
+#	return 0 if $1 is used in COMP_WORDS, else return 1
+function _option_is_used
+{
+	typeset	-r opt="$1"
+
+	typeset i
+	for i in $( seq $ifirstoption ${#COMP_WORDS[@]} )
+	do
+		[ "$opt" == "${COMP_WORDS[i]}" ] && return 0 || true
+	done
+
+	return 1 # not found
+}
+
 #	$@	option_list
 #	print to stdout option_list with used options removed.
 function _remove_used_options
@@ -217,20 +231,6 @@ function _remove_used_options
 	done
 
 	echo $option_list
-}
-
-#	return 0 if $1 is used in COMP_WORDS, else return 1
-function _option_is_used
-{
-	typeset	-r opt="$1"
-
-	typeset i
-	for i in $( seq $ifirstoption ${#COMP_WORDS[@]} )
-	do
-		[ "$opt" == "${COMP_WORDS[i]}" ] && return 0 || true
-	done
-
-	return 1 # not found
 }
 
 #	Ex : srvctl stop service -db db_name [-node | -instance]
@@ -274,6 +274,8 @@ function _remove_exclusive_options
 #	before to reply :
 #		- remove options already in use.
 #		- remove incompatible options.
+#
+#	With only one option use _reply !
 function _reply_with_options
 {
 	typeset	option_list="$@"
@@ -294,39 +296,45 @@ function _reply_with_options
 
 function _reply_with_database_list
 {
-	_reply "$(crsctl stat res	|\
-					grep "\.db$" | sed "s/NAME=ora\.\(.*\).db/\1/g" | xargs)"
+	_reply "$(crsctl stat res							|\
+					grep "\.db$"						|\
+					sed "s/NAME=ora\.\(.*\).db/\1/g"	|\
+					xargs)"
 }
 
 function _reply_with_diskgroup_list
 {
-	_reply	"$(crsctl stat res		|\
-					grep -E "ora.*.dg$"	|\
-					sed "s/NAME=ora.\(.*\).dg/\1/g" | xargs)"
+	_reply	"$(crsctl stat res						|\
+					grep -E "ora.*.dg$"				|\
+					sed "s/NAME=ora.\(.*\).dg/\1/g"	|\
+					xargs)"
 }
 
 function _reply_with_listener_list
 {
 	#	For RAC database we must exclude listener for scan vips.
-	_reply	"$(crsctl stat res				|\
-					grep -E "NAME=ora.*.lsnr$"	|\
-					grep -v "SCAN"				|\
-					sed "s/NAME=ora.\(.*\).lsnr/\1/g" | xargs)"
+	_reply	"$(crsctl stat res							|\
+					grep -E "NAME=ora.*.lsnr$"			|\
+					grep -v "SCAN"						|\
+					sed "s/NAME=ora.\(.*\).lsnr/\1/g"	|\
+					xargs)"
 }
 
 function _reply_with_oraclehome_list
 {
-	_reply	"$(cat /etc/oratab			|\
-					grep -E "^(\+|[A-Z])"	|\
-					sed "s/.*:\(.*\):[Y|N].*/\1/g" | xargs)"
+	_reply	"$(cat /etc/oratab						|\
+					grep -E "^(\+|[A-Z])"			|\
+					sed "s/.*:\(.*\):[Y|N].*/\1/g"	|\
+					xargs)"
 }
 
 function _reply_with_vip_list
 {
-	_reply	"$(crsctl stat res				|\
-					grep -E "NAME=ora.*.vip$"	|\
-					grep -v "scan"				|\
-					sed "s/NAME=ora.\(.*\).vip/\1/g" | xargs)"
+	_reply	"$(crsctl stat res							|\
+					grep -E "NAME=ora.*.vip$"			|\
+					grep -v "scan"						|\
+					sed "s/NAME=ora.\(.*\).vip/\1/g"	|\
+					xargs)"
 }
 
 function _reply_with_netnum_list
@@ -338,7 +346,7 @@ function _reply_with_netnum_list
 
 function _reply_with_scannumber_list
 {
-	_reply_with_options "1 2 3"
+	_reply "1 2 3"
 }
 
 function _reply_with_node_number_list
@@ -373,14 +381,16 @@ function _reply_with_service_list
 	typeset	-ri idbname=$(_get_dbname_index)
 	if [ $idbname -eq -1 ]
 	then # return all services
-		_reply "$(crsctl stat res			|\
-						grep -E "ora.*.svc$"	|\
-						sed "s/NAME=ora\.\(.*\)\.svc/\1/g" | xargs)"
+		_reply "$(crsctl stat res							|\
+						grep -E "ora.*.svc$"				|\
+						sed "s/NAME=ora\.\(.*\)\.svc/\1/g"	|\
+						xargs)"
 	else # return services for specified database.
 		typeset -r dbname=$(tr [:upper:] [:lower:]<<<"${COMP_WORDS[idbname]}")
-		_reply "$(crsctl stat res						|\
-						grep -Ei "ora.$dbname.*.svc$"		|\
-						sed "s/NAME=ora\.${dbname}\.\(.*\)\.svc/\1/g" | xargs)"
+		_reply "$(crsctl stat res										|\
+						grep -Ei "ora.$dbname.*.svc$"					|\
+						sed "s/NAME=ora\.${dbname}\.\(.*\)\.svc/\1/g"	|\
+						xargs)"
 	fi
 }
 
@@ -394,7 +404,7 @@ function _reply_with_instance_list
 	fi
 
 	if [ -v instance_list ]
-	then
+	then # TODO : invalidate cache on remove or add commands.
 		if [ $(( SECONDS - tt_instance_list )) -lt $(( 60 * 10 )) ]
 		then
 			_reply "$instance_list"
@@ -450,8 +460,23 @@ function _reply_with_id_list
 
 function _reply_with_serverpool_list
 {
-	# Must provide server pool name
-	COMPREPLY=()
+	if [ -v pool_list ]
+	then # TODO : invalidate cache on remove or add commands.
+		if [ $(( SECONDS - tt_pool_list )) -lt $(( 60 * 10 )) ]
+		then
+			_reply "$pool_list"
+			return 0
+		fi
+		# cache to old.
+	fi
+
+	typeset -g pool_list="$(srvctl status srvpool			|\
+								grep "^Server pool name:"	|\
+								awk '{ print $4 }'			|\
+								xargs)"
+	typeset	-gi	tt_pool_list=$SECONDS
+
+	_reply "$pool_list"
 }
 
 #	End callback functions.
@@ -543,7 +568,7 @@ function _reply_for_cmd_status
 			;;
 
 		srvpool)
-			_log "todo _reply_for_cmd_status $@"
+			_reply_with_options "-serverpool -detail"
 			;;
 
 		server)
@@ -590,7 +615,7 @@ function _reply_for_cmd_status
 			;;
 
 		cvu)
-			_reply_with_options "-node"
+			_reply "-node"
 			;;
 
 		gns)
@@ -598,11 +623,11 @@ function _reply_for_cmd_status
 			;;
 
 		mgmtdb)
-			_reply_with_options "-verbose"
+			_reply "-verbose"
 			;;
 
 		mgmtlsnr)
-			_reply_with_options "-verbose"
+			_reply "-verbose"
 			;;
 
 		exportfs)
@@ -610,15 +635,15 @@ function _reply_for_cmd_status
 			;;
 
 		havip)
-			_reply_with_options "-id"
+			_reply "-id"
 			;;
 
 		mountfs)
-			_reply_with_options "-name"
+			_reply "-name"
 			;;
 
 		ons)
-			_reply_with_options "-verbose"
+			_reply "-verbose"
 			;;
 
 		*)
@@ -674,7 +699,7 @@ function _reply_for_cmd_start
 			then
 				_reply_with_options "-listener -force"
 			else
-				_reply_with_options "-listener"
+				_reply "-listener"
 			fi
 			;;
 
@@ -683,12 +708,12 @@ function _reply_for_cmd_start
 			then
 				_reply_with_options "-diskgroup -node"
 			else
-				_reply_with_options "-diskgroup"
+				_reply "-diskgroup"
 			fi
 			;;
 
 		ons) # standalone only
-			_reply_with_options "-verbose"
+			_reply "-verbose"
 			;;
 
 		home)
@@ -705,7 +730,7 @@ function _reply_for_cmd_start
 			;;
 
 		mgmtlsnr)
-			_reply_with_options "-node"
+			_reply "-node"
 			;;
 
 		rhpclient)
@@ -713,7 +738,7 @@ function _reply_for_cmd_start
 			;;
 
 		cvu)
-			_reply_with_options "-node"
+			_reply "-node"
 			;;
 
 		filesystem)
@@ -784,7 +809,7 @@ function _next_reply_for_cmd_start
 				;;
 
 			-loglevel) # Callback ?
-				_reply_with_options "{1..6}"
+				_reply "{1..6}"
 				;;
 
 			*)
@@ -854,7 +879,7 @@ function _reply_for_cmd_stop
 			;;
 
 		ons) # only on standalone.
-			_reply_with_options "-verbose"
+			_reply "-verbose"
 			;;
 
 		home)
@@ -880,7 +905,7 @@ function _reply_for_cmd_stop
 			;;
 
 		cvu)
-			_reply_with_options "-force"
+			_reply "-force"
 			;;
 
 		filesystem)
@@ -990,7 +1015,7 @@ function _reply_for_cmd_config
 			then
 				_reply_with_options "-proxy -detail"
 			else
-				_reply_with_options "-all"
+				_reply "-all"
 			fi
 			;;
 
@@ -999,7 +1024,7 @@ function _reply_for_cmd_config
 			then
 				_reply_with_options "-listener -asmlistener -leaflistener -all"
 			else
-				_reply_with_options "-listener"
+				_reply "-listener"
 			fi
 			;;
 
@@ -1012,11 +1037,11 @@ function _reply_for_cmd_config
 			;;
 
 		filesystem)
-			_reply_with_options "-device"
+			_reply "-device"
 			;;
 
 		mgmtlsnr)
-			_reply_with_options "-all"
+			_reply "-all"
 			;;
 
 		oc4j)
@@ -1039,7 +1064,7 @@ function _reply_for_cmd_config
 			;;
 
 		mountfs)
-			_reply_with_options "-name"
+			_reply "-name"
 			;;
 
 		rhpclient)
@@ -1047,7 +1072,7 @@ function _reply_for_cmd_config
 			;;
 
 		network)
-			_reply_with_options "-netnum"
+			_reply "-netnum"
 			;;
 
 		rhpserver)
@@ -1055,7 +1080,7 @@ function _reply_for_cmd_config
 			;;
 
 		srvpool)
-			_reply_with_options "-serverpool"
+			_reply "-serverpool"
 			;;
 
 		exportfs)
@@ -1093,7 +1118,7 @@ function _reply_for_cmd_enable
 			then
 				_reply_with_options "-db -node"
 			else # TODO : to validate.
-				_reply_with_options "-db"
+				_reply "-db"
 			fi
 			;;
 
@@ -1102,7 +1127,7 @@ function _reply_for_cmd_enable
 			then
 				_reply_with_options "-instance -node"
 			else # TODO : to validate.
-				_reply_with_options "-instance"
+				_reply "-instance"
 			fi
 			;;
 
@@ -1145,15 +1170,15 @@ function _reply_for_cmd_enable
 			;;
 
 		rhpserver)
-			_reply_with_options "-node"
+			_reply "-node"
 			;;
 
 		rhpclient)
-			_reply_with_options "-node"
+			_reply "-node"
 			;;
 
 		filesystem)
-			_reply_with_options "-device"
+			_reply "-device"
 			;;
 
 		volume) # TODO : standalon
@@ -1169,19 +1194,19 @@ function _reply_for_cmd_enable
 			;;
 
 		cvu)
-			_reply_with_options "-node"
+			_reply "-node"
 			;;
 
 		mgmtdb)
-			_reply_with_options "-node"
+			_reply "-node"
 			;;
 
 		mgmtlsnr)
-			_reply_with_options "-node"
+			_reply "-node"
 			;;
 
 		exportfs)
-			_reply_with_options "-name"
+			_reply "-name"
 			;;
 
 		havip)
