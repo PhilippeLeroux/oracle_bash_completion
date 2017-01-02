@@ -1,7 +1,7 @@
 # bash completion support for srvctl 12cR1
 # vim: ts=4:sw=4:filetype=sh:cc=81
 
-# Copyright (C) 2016 Philippe Leroux <philippe.lrx@gmail.com>
+# Copyright (C) 2016,2017 Philippe Leroux <philippe.lrx@gmail.com>
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -1110,6 +1110,7 @@ function _reply_for_cmd_config
 	esac
 }
 
+#	reply for command enable
 function _reply_for_cmd_enable
 {
 	case "$object_name" in
@@ -1224,9 +1225,227 @@ function _reply_for_cmd_enable
 	esac
 }
 
-#	End callback functions for command.
+#	reply for command disable
+function _reply_for_cmd_disable
+{
+	case "$object_name" in
+		database)
+			_reply_with_options "-db -node"
+			;;
+
+		instance)
+			_reply_with_options "-db -instance"
+			;;
+
+		service)
+			_reply_with_options "-db -service -instance -node -global_override"
+			;;
+
+		asm)
+			_reply_with_options "-proxy -node"
+			;;
+
+		listener)
+			_reply_with_options "-listener -node"
+			;;
+
+		nodeapps)
+			_reply_with_options "-adminhelper -verbose"
+			;;
+
+		vip)
+			_reply_with_options "-vip -verbose"
+			;;
+
+		scan)
+			_reply_with_options "-netnum -scannumber"
+			;;
+
+		scan_listener)
+			_reply_with_options "-netnum -scannumber"
+			;;
+
+		oc4j)
+			_reply_with_options "-node -verbose"
+			;;
+
+		rhpserver)
+			_reply "-node"
+			;;
+
+		rhpclient)
+			_reply "-node"
+			;;
+
+		filesystem)
+			_reply "-device"
+			;;
+
+		volume)
+			_reply_with_options "-volume -diskgroup -device -node"
+			;;
+
+		diskgroup)
+			_reply_with_options "-diskgroup -node"
+			;;
+
+		gns)
+			_reply_with_options "-node -verbose"
+			;;
+
+		cvu)
+			_reply "-node"
+			;;
+
+		mgmtdb)
+			_reply "-node"
+			;;
+
+		mgmtlsnr)
+			_reply "-node"
+			;;
+
+		exportfs)
+			_reply "-name"
+			;;
+
+		havip)
+			_reply_with_options "-id -node"
+			;;
+
+		mountfs)
+			_reply_with_options "-name -node"
+			;;
+
+		*)
+			_log "_reply_for_cmd_disable $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
+}
+
+#	reply for command getenv
+function _reply_for_cmd_getenv
+{
+	case "$object_name" in
+		database)
+			_reply_with_options "-db -envs"
+			;;
+
+		nodeapps)
+			_reply_with_options "-viponly -onsonly -envs"
+			;;
+
+		vip)
+			_reply_with_options "-vip -envs"
+			;;
+
+		listener)
+			_reply_with_options "-listener -envs"
+			;;
+
+		asm)
+			_reply "-envs"
+			;;
+
+		mgmtdb)
+			_reply "-envs"
+			;;
+
+		mgmtlsnr)
+			_reply "-envs"
+			;;
+
+		*)
+			_log "_reply_for_cmd_getenv $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
+}
+
+#	reply for command setenv
+function _reply_for_cmd_setenv
+{
+	case "$object_name" in
+		database)
+			_reply_with_options "-db -envs -env"
+			;;
+
+		nodeapps)
+			_reply_with_options "-envs -env -viponly -onsonly -verbose"
+			;;
+
+		vip)
+			_reply_with_options "-vip -envs -env -verbose"
+			;;
+
+		listener)
+			_reply_with_options "-listener -envs -env"
+			;;
+
+		asm)
+			_reply_with_options "-envs -env"
+			;;
+
+		mgmtdb)
+			_reply_with_options "-envs -env"
+			;;
+
+		mgmtlsnr)
+			_reply_with_options "-envs -env"
+			;;
+
+		*)
+			_log "_reply_for_cmd_setenv $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
+}
+
+#	reply for command unsetenv
+function _reply_for_cmd_unsetenv
+{
+	case "$object_name" in
+		database)
+			_reply_with_options "-db -envs"
+			;;
+
+		nodeapps)
+			_reply_with_options "-envs -viponly -onsonly -verbose"
+			;;
+
+		vip)
+			_reply_with_options "-vip -envs -verbose"
+			;;
+
+		listener)
+			_reply_with_options "-listener -envs"
+			;;
+
+		asm)
+			_reply "-envs"
+			;;
+
+		mgmtdb)
+			_reply "-envs"
+			;;
+
+		mgmtlsnr)
+			_reply "-envs"
+			;;
+
+		*)
+			_log "_reply_for_cmd_unsetenv $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
+}
+
+#	End callback functions for commands.
 #	============================================================================
 
+#	If a function named _next_reply_for_cmd_$command exists, it's called.
+#	Else call function _reply_for_option, if return 1 call _reply_for_cmd_$command
 function _next_reply_for_cmd
 {
 	if _function_exists _next_reply_for_cmd_$command
@@ -1276,14 +1495,14 @@ function _srvctl_complete
 	elif [[ "$object_list" == *"$prev_word"* ]]
 	then # srvctl <command> <object> TAB
 		if _function_exists _reply_for_cmd_${command}
-		then
+		then # $command is implemented.
 			_reply_for_cmd_${command}
 		else
 			_log "TODO : command '$command' not supported."
 		fi
 	else # srvctl <command> <object> opt1 opt2 ... TAB
 		if _function_exists _reply_for_cmd_${command}
-		then
+		then # $command is implemented.
 			_next_reply_for_cmd
 		else
 			_log "TODO : command '$command' not supported."
