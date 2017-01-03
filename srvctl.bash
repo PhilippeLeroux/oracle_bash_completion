@@ -479,6 +479,11 @@ function _reply_with_serverpool_list
 	_reply "$pool_list"
 }
 
+function _reply_with_envs_list
+{	# envs should be followed by a value.
+	COMPREPLY=()
+}
+
 #	End callback functions.
 #	============================================================================
 
@@ -487,11 +492,13 @@ function _function_exists
 	type -t "$1" >/dev/null 2>&1
 }
 
-#	$1 option name, must begin with a dash.
-#	$2 list of valid options.
-#		Must exist a callback function like _reply_with_[option]_list, the dash
-#		is removed from the option name before the call.
-#		-db is translated to -database and -s is translated to -service
+#	$1 option name, if not begin with a dash return 1.
+#
+#	Must exist a callback function like _reply_with_[option]_list, the dash is
+#	removed from the option name before the call.
+#
+#	-db is translated to -database and -s is translated to -service
+#
 #	return 0 if reply done, else return 1.
 function _reply_for_option
 {

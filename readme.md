@@ -2,7 +2,7 @@
 
 * srvctl \<command\> \<object\> option1, option2, ...
 
-	Completion work for all commands and all objects for a command.
+	Completion work on all commands and on all objects for a command.
 
 	Options supported for commands :
 	* status : full support.
@@ -10,6 +10,18 @@
 	* start : must be tested on policy managed (-eval) & One Node (-node).
 	* stop : must be tested on policy managed (-eval).
 	* enable : tested on RAC only.
+	* disable : tested on RAC only.
+	* getenv : tested on RAC only.
+	* setenv : tested on RAC only.
+	* unsetenv : tested on RAC only.
+
+	Options not supported for commands (todo) :
+	* add
+	* remove
+	* modify
+	* update
+	* upgrade
+	* downgrade
 
 ### Installation
 Copy file `srvctl.bash` to `/etc/bash_completion.d`
@@ -46,7 +58,7 @@ Scripts to help me.
 
 ### LICENCE
 
-Copyright © 2016,2017 Philippe Leroux <philippe.lrx@gmail.com>
+Copyright © 2016,2017 Philippe Leroux
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
