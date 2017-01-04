@@ -7,16 +7,16 @@
 	Options supported for commands :
 	* status : full support.
 	* config : full support.
-	* start : must be tested on policy managed (-eval) & One Node (-node).
-	* stop : must be tested on policy managed (-eval).
-	* enable : tested on RAC only.
-	* disable : tested on RAC only.
-	* getenv : tested on RAC only.
-	* setenv : tested on RAC only.
-	* unsetenv : tested on RAC only.
+	* start : full support. 
+	* stop : full support.
+	* enable : full support.
+	* disable : full support.
+	* getenv : full support.
+	* setenv : full support.
+	* unsetenv : full support.
 
 	Options not supported for commands (todo) :
-	* add
+	* add : need some improvements to be implemented.
 	* remove
 	* modify
 	* update
