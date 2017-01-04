@@ -224,7 +224,8 @@ function _remove_used_options
 
 	for i in $( seq $ifirstoption ${#COMP_WORDS[@]} )
 	do
-		if [[ $i -ne $COMP_CWORD && "$option_list" == *"${COMP_WORDS[i]}"* ]]
+		if [[ x"${COMP_WORDS[i]}" != x && $i -ne $COMP_CWORD 
+				&& "$option_list" == *"${COMP_WORDS[i]}"* ]]
 		then
 			option_list=${option_list/${COMP_WORDS[i]}/}
 		fi
@@ -248,6 +249,9 @@ function _remove_exclusive_options
 	exclusive_options+=( [list_3]="-netnum -scannumber" )
 	exclusive_options+=( [list_4]="-service -startoption" )
 	exclusive_options+=( [list_5]="-listener -asmlistener -leaflistener" )
+	exclusive_options+=( [list_6]="-env -envs" ) # order is important.
+
+	typeset	-r	cur_word="${COMP_WORDS[COMP_CWORD]}"
 
 	for id in ${!exclusive_options[@]}
 	do
@@ -255,7 +259,7 @@ function _remove_exclusive_options
 		typeset option
 		for option in $exlu_opts
 		do
-			if _option_is_used "$option"
+			if [ "$option" != "$cur_word" ] && _option_is_used "$option"
 			then
 				typeset o2r	# option to removed.
 				for o2r in ${exlu_opts/$option/}
@@ -481,6 +485,11 @@ function _reply_with_serverpool_list
 
 function _reply_with_envs_list
 {	# envs should be followed by a value.
+	COMPREPLY=()
+}
+
+function _reply_with_env_list
+{	# env should be followed by a value.
 	COMPREPLY=()
 }
 
@@ -1125,18 +1134,13 @@ function _reply_for_cmd_enable
 			if _is_cluster
 			then
 				_reply_with_options "-db -node"
-			else # TODO : to validate.
+			else
 				_reply "-db"
 			fi
 			;;
 
 		instance)
-			if _is_cluster
-			then
-				_reply_with_options "-instance -node"
-			else # TODO : to validate.
-				_reply "-instance"
-			fi
+			_reply_with_options "-instance -node"
 			;;
 
 		service)
@@ -1144,116 +1148,27 @@ function _reply_for_cmd_enable
 			then
 				_reply_with_options "-db -service -instance -node
 									-global_override"
-			else # TODO : to validate.
+			else
 				_reply_with_options "-db -service -global_override"
 			fi
 			;;
 
-		asm) # TODO : standalone
-			_reply_with_options "-proxy -node"
-			;;
-
-		listener) # TODO : standalon
-			_reply_with_options "-listener -node"
-			;;
-
-		nodeapps)
-			_reply_with_options "-adminhelper -verbose"
-			;;
-
-		vip)
-			_reply_with_options "-vip -verbose"
-			;;
-
-		scan)
-			_reply_with_options "-netnum -scannumber"
-			;;
-
-		scan_listener)
-			_reply_with_options "-netnum -scannumber"
-			;;
-
-		oc4j)
-			_reply_with_options "-node -verbose"
-			;;
-
-		rhpserver)
-			_reply "-node"
-			;;
-
-		rhpclient)
-			_reply "-node"
-			;;
-
-		filesystem)
-			_reply "-device"
-			;;
-
-		volume) # TODO : standalon
-			_reply_with_options "-volume -diskgroup -device -node"
-			;;
-
-		diskgroup)
-			_reply_with_options "-diskgroup -node"
-			;;
-
-		gns)
-			_reply_with_options "-node -verbose"
-			;;
-
-		cvu)
-			_reply "-node"
-			;;
-
-		mgmtdb)
-			_reply "-node"
-			;;
-
-		mgmtlsnr)
-			_reply "-node"
-			;;
-
-		exportfs)
-			_reply "-name"
-			;;
-
-		havip)
-			_reply_with_options "-id -node"
-			;;
-
-		mountfs)
-			_reply_with_options "-name -node"
-			;;
-
-		*)
-			_log "_reply_for_cmd_enable $object_name : todo"
-			COMPREPLY=()
-			;;
-	esac
-}
-
-#	reply for command disable
-function _reply_for_cmd_disable
-{
-	case "$object_name" in
-		database)
-			_reply_with_options "-db -node"
-			;;
-
-		instance)
-			_reply_with_options "-db -instance"
-			;;
-
-		service)
-			_reply_with_options "-db -service -instance -node -global_override"
-			;;
-
 		asm)
-			_reply_with_options "-proxy -node"
+			if _is_cluster
+			then
+				_reply_with_options "-proxy -node"
+			else
+				COMPREPLY=()
+			fi
 			;;
 
 		listener)
-			_reply_with_options "-listener -node"
+			if _is_cluster
+			then
+				_reply_with_options "-listener -node"
+			else
+				_reply_with_options "-listener"
+			fi
 			;;
 
 		nodeapps)
@@ -1293,7 +1208,12 @@ function _reply_for_cmd_disable
 			;;
 
 		diskgroup)
-			_reply_with_options "-diskgroup -node"
+			if _is_cluster
+			then
+				_reply_with_options "-diskgroup -node"
+			else
+				_reply_with_options "-diskgroup"
+			fi
 			;;
 
 		gns)
@@ -1322,6 +1242,139 @@ function _reply_for_cmd_disable
 
 		mountfs)
 			_reply_with_options "-name -node"
+			;;
+
+		ons)
+			_reply "-verbose"
+			;;
+
+		*)
+			_log "_reply_for_cmd_enable $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
+}
+
+#	reply for command disable
+function _reply_for_cmd_disable
+{
+	case "$object_name" in
+		database)
+			if _is_cluster
+			then
+				_reply_with_options "-db -node"
+			else
+				_reply_with_options "-db"
+			fi
+			;;
+
+		instance)
+			_reply_with_options "-db -instance"
+			;;
+
+		service)
+			if _is_cluster
+			then
+				_reply_with_options "-db -service -instance -node
+									-global_override"
+			else
+				_reply_with_options "-db -service -node -global_override"
+			fi
+			;;
+
+		asm)
+			if _is_cluster
+			then
+				_reply_with_options "-proxy -node"
+			else
+				COMPREPLY=()
+			fi
+			;;
+
+		listener)
+			if _is_cluster
+			then
+				_reply_with_options "-listener -node"
+			else
+				_reply_with_options "-listener"
+			fi
+			;;
+
+		nodeapps)
+			_reply_with_options "-adminhelper -verbose"
+			;;
+
+		vip)
+			_reply_with_options "-vip -verbose"
+			;;
+
+		scan)
+			_reply_with_options "-netnum -scannumber"
+			;;
+
+		scan_listener)
+			_reply_with_options "-netnum -scannumber"
+			;;
+
+		oc4j)
+			_reply_with_options "-node -verbose"
+			;;
+
+		rhpserver)
+			_reply "-node"
+			;;
+
+		rhpclient)
+			_reply "-node"
+			;;
+
+		filesystem)
+			_reply "-device"
+			;;
+
+		volume)
+			_reply_with_options "-volume -diskgroup -device -node"
+			;;
+
+		diskgroup)
+			if _is_cluster
+			then
+				_reply_with_options "-diskgroup -node"
+			else
+				_reply_with_options "-diskgroup"
+			fi
+			;;
+
+		gns)
+			_reply_with_options "-node -verbose"
+			;;
+
+		cvu)
+			_reply "-node"
+			;;
+
+		mgmtdb)
+			_reply "-node"
+			;;
+
+		mgmtlsnr)
+			_reply "-node"
+			;;
+
+		exportfs)
+			_reply "-name"
+			;;
+
+		havip)
+			_reply_with_options "-id -node"
+			;;
+
+		mountfs)
+			_reply_with_options "-name -node"
+			;;
+
+		ons)
+			_reply "-verbose"
 			;;
 
 		*)
@@ -1373,33 +1426,34 @@ function _reply_for_cmd_getenv
 #	reply for command setenv
 function _reply_for_cmd_setenv
 {
+	# always put -env before -envs
 	case "$object_name" in
 		database)
-			_reply_with_options "-db -envs -env"
+			_reply_with_options "-db -env -envs"
 			;;
 
 		nodeapps)
-			_reply_with_options "-envs -env -viponly -onsonly -verbose"
+			_reply_with_options "-env -envs -viponly -onsonly -verbose"
 			;;
 
 		vip)
-			_reply_with_options "-vip -envs -env -verbose"
+			_reply_with_options "-vip -env -envs -verbose"
 			;;
 
 		listener)
-			_reply_with_options "-listener -envs -env"
+			_reply_with_options "-listener -env -envs"
 			;;
 
 		asm)
-			_reply_with_options "-envs -env"
+			_reply_with_options "-env -envs"
 			;;
 
 		mgmtdb)
-			_reply_with_options "-envs -env"
+			_reply_with_options "-env -envs"
 			;;
 
 		mgmtlsnr)
-			_reply_with_options "-envs -env"
+			_reply_with_options "-env -envs"
 			;;
 
 		*)
