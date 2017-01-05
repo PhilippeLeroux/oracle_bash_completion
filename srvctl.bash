@@ -38,19 +38,26 @@ function _is_cluster
 	[ $count_nodes -gt 1 ] && return 0 || return 1
 }
 
-#	print to stdout dbname index in COMP_WORDS, -1 if not found.
-function _get_dbname_index
+#	print to stdout dbname or empty string if not found.
+function _get_dbname
 {
 	for i in $( seq $ifirstoption ${#COMP_WORDS[@]} )
 	do
-		if [[ ${COMP_WORDS[i]} == "-db" || ${COMP_WORDS[i]} == "-database" ]]
-		then
-			[ x"${COMP_WORDS[i+1]}" == x ] && echo -1 || echo $(( i + 1 ))
-			return 0
-		fi
+		case "${COMP_WORDS[i]}" in
+			-db|-database)
+				if [ x"${COMP_WORDS[i+1]}" == x ]
+				then # no name after -db|-database
+					echo ""
+				else
+					echo "${COMP_WORDS[i+1]}"
+				fi
+				return
+				;;
+		esac
 	done
 
-	echo -1
+	# -db|-database not found.
+	echo ""
 }
 
 #	build the reply : COMPREPLY is set.
@@ -224,7 +231,7 @@ function _remove_used_options
 
 	for i in $( seq $ifirstoption ${#COMP_WORDS[@]} )
 	do
-		if [[ x"${COMP_WORDS[i]}" != x && $i -ne $COMP_CWORD 
+		if [[ x"${COMP_WORDS[i]}" != x && $i -ne $COMP_CWORD
 				&& "$option_list" == *"${COMP_WORDS[i]}"* ]]
 		then
 			option_list=${option_list/${COMP_WORDS[i]}/}
@@ -382,17 +389,17 @@ function _reply_with_servers_list
 
 function _reply_with_service_list
 {
-	typeset	-ri idbname=$(_get_dbname_index)
-	if [ $idbname -eq -1 ]
+	typeset	dbname=$(_get_dbname)
+	if [ x"$dbname" == x ]
 	then # return all services
 		_reply "$(crsctl stat res							|\
 						grep -E "ora.*.svc$"				|\
 						sed "s/NAME=ora\.\(.*\)\.svc/\1/g"	|\
 						xargs)"
 	else # return services for specified database.
-		typeset -r dbname=$(tr [:upper:] [:lower:]<<<"${COMP_WORDS[idbname]}")
+		typeset -r dbname=$(tr [:upper:] [:lower:]<<<"$dbname")
 		_reply "$(crsctl stat res										|\
-						grep -Ei "ora.$dbname.*.svc$"					|\
+						grep -E "ora.$dbname.*.svc$"					|\
 						sed "s/NAME=ora\.${dbname}\.\(.*\)\.svc/\1/g"	|\
 						xargs)"
 	fi
@@ -400,8 +407,8 @@ function _reply_with_service_list
 
 function _reply_with_instance_list
 {
-	typeset	-ri idbname=$(_get_dbname_index)
-	if [ $idbname -eq -1 ]
+	typeset	-r dbname=$(_get_dbname)
+	if [ x"$dbname" == x ]
 	then
 		COMPREPLY=()
 		return 0
@@ -417,7 +424,7 @@ function _reply_with_instance_list
 		# cache to old.
 	fi
 
-	typeset	cmd="srvctl status database -db ${COMP_WORDS[idbname]}"
+	typeset	cmd="srvctl status database -db $dbname"
 	cmd="$cmd | sed 's/Instance \(.*\) is.*/\1/g' | xargs"
 	_log "cmd='$cmd'"
 
@@ -491,6 +498,66 @@ function _reply_with_envs_list
 function _reply_with_env_list
 {	# env should be followed by a value.
 	COMPREPLY=()
+}
+
+function _reply_with_policy_list
+{	# add database -policy
+	_reply "automatic manual norestart"
+}
+
+function _reply_with_role_list
+{	# add database -role
+	_reply "primary physical_standby logical_standby snapshot_standby far_sync"
+}
+
+function _reply_with_failovertype_list
+{	# add service
+	_reply "none session select transaction"
+}
+
+function _reply_with_failovermethod_list
+{	# add service
+	_reply "none basic"
+}
+
+function _reply_with_failoverdelay_list
+{	# add service
+	COMPREPLY=()
+}
+
+function _reply_with_failoverretry_list
+{	# add service
+	COMPREPLY=()
+}
+
+function _reply_with_clbgoal_list
+{	# add service
+	_reply "short long"
+}
+
+function _reply_with_rlbgoal_list
+{	# add service
+	_reply "service_time throughput none"
+}
+
+function _reply_with_notification_list
+{	# add service
+	_reply "true false"
+}
+
+function _reply_with_global_list
+{	# add service
+	_reply "true false"
+}
+
+function _reply_with_commit_outcome_list
+{	# add service
+	_reply "true false"
+}
+
+function _reply_with_session_state_list
+{	# add service
+	_reply "static dynamic"
 }
 
 #	End callback functions.
@@ -1500,6 +1567,90 @@ function _reply_for_cmd_unsetenv
 			COMPREPLY=()
 			;;
 	esac
+}
+
+function _reply_for_cmd_add
+{
+	case "$object_name" in
+		database)
+			_reply_with_options "-db -oraclehome -domain -spfile -pwfile -role
+								-startoption -stopoption -dbname -instance
+								-policy -diskgroup -verbose"
+			;;
+
+		service)
+			_reply_with_options "-db -service -role -policy -failovertype
+								-failovermethod -failoverdelay -failoverretry
+								-edition -pdb -maxlag -clbgoal -rlbgoal
+								-notification -global -sql_translation_profile
+								-commit_outcome -retention -replay_init_time
+								-session_state -force -verbose"
+			;;
+
+		asm)
+			_reply_with_options "-listener -spfile -pwfile -diskstring"
+			;;
+
+		listener)
+			_reply_with_options "-listener -oraclehome -skip -endpoints"
+			;;
+
+		ons)
+			_reply_with_options "-emport -onslocalport -onsremoteport
+								-remoteservers -verbose"
+			;;
+
+		*)
+			_log "_reply_for_cmd_add $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
+}
+
+function _next_reply_for_cmd_add
+{
+	typeset reply_done=no
+
+	case "$prev_word" in
+		-db)
+			if [ "$object_name" == "database" ]
+			then # callback return an existing database.
+				COMPREPLY=()
+				reply_done=yes
+			fi
+			# for service callback OK.
+			;;
+
+		-instance) # callback return an existing instance.
+			COMPREPLY=()
+			reply_done=yes
+			;;
+
+		-service) # callback return an existing service.
+			COMPREPLY=()
+			reply_done=yes
+			;;
+
+		-dbname|-domain|-spfile|-pwfile|-diskstring|-skip|-endpoints|\
+		-emport|-onslocalport|-onsremoteport|-remoteservers|\
+		-edition|-pdb|-maxlag|-sql_translation_profile|-retention|\
+		-replay_init_time)
+			# will see later for a callback (if needed)
+			# For this options, user must provide a value.
+			COMPREPLY=()
+			reply_done=yes
+			;;
+
+		read)	# start option read only
+			_reply "only"
+			reply_done=yes
+			;;
+	esac
+
+	if [ "$reply_done" != "yes" ] && ! _reply_for_option "$prev_word"
+	then
+		_reply_for_cmd_add
+	fi
 }
 
 #	End callback functions for commands.

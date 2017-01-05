@@ -14,9 +14,9 @@
 	* getenv : full support.
 	* setenv : full support.
 	* unsetenv : full support.
+	* add : support for standalone only.
 
 	Options not supported for commands (todo) :
-	* add : need some improvements to be implemented.
 	* remove
 	* modify
 	* update
