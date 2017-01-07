@@ -1,0 +1,82 @@
+#!/bin/bash
+# vim: ts=4:sw=4
+
+. ~/plescripts/plelib.sh
+EXEC_CMD_ACTION=EXEC
+
+typeset -r ME=$0
+typeset -r str_usage=\
+"Usage : $ME [-alias_empty_list] \"option1|options2|...\"
+  -alias_empty_list make alias on _reply_with_empty_list
+"
+
+typeset options=undef
+typeset alias_empty_list=no
+
+while [ $# -ne 0 ]
+do
+	case $1 in
+		-emul)
+			EXEC_CMD_ACTION=NOP
+			shift
+			;;
+
+		-alias_empty_list)
+			alias_empty_list=yes
+			shift
+			;;
+
+		-h|-help|help)
+			info "$str_usage"
+			LN
+			exit 1
+			;;
+
+		*)
+			if [ "$options" == undef ]
+			then
+				options="$1"
+				shift
+			else
+				error "Arg '$1' invalid."
+				LN
+				info "$str_usage"
+				exit 1
+			fi
+			;;
+	esac
+done
+
+if grep -qE "|" <<<"$options"
+then
+	options=${options//|/ }
+fi
+
+typeset -a new_aliases
+
+for option in $options
+do
+	if [ "${option:0:1}" == "-" ]
+	then
+		option=${option:1}
+	fi
+
+	cb_name=_reply_with_${option}_list
+	info -n "function $cb_name : "
+	if grep -qE "^(function|alias) $cb_name" srvctl.bash
+	then
+		info -f "[${GREEN}yes${NORM}]"
+	else
+		info -f "[${RED}no${NORM}]"
+		if [ $alias_empty_list == yes ]
+		then
+			new_aliases+=( "alias _reply_with_${option}_list=_reply_with_empty_list" )
+		fi
+	fi
+	LN
+done
+
+for i in $( seq 0 $(( ${#new_aliases[@]} - 1 )) )
+do
+	echo ${new_aliases[i]}
+done

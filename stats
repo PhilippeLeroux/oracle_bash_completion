@@ -1,0 +1,10 @@
+#!/bin/bash
+# vim: ts=4:sw=4
+
+nr_cb_option=$(grep -E "^function _reply_with_.*_list" srvctl.bash | wc -l)
+nr_cb_alias=$(grep -E "^alias _reply_with_.*_list" srvctl.bash | wc -l)
+nr_cb_cmd=$(grep -E "^function (_next)?_reply_for_cmd.*$" srvctl.bash | wc -l)
+
+echo "$nr_cb_option callbacks for options with parameter."
+echo "$nr_cb_alias alias on callbaks for options with parameter."
+echo "$nr_cb_cmd callbacks for commands."
