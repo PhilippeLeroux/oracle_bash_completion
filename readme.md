@@ -69,16 +69,17 @@ For a command can be created 2 functions :
 * `_reply_for_cmd_<command name>` : provide all options for the tuple [command,object]
 * `_next_reply_for_cmd_<command name>` (optional)
 
-If a function `_reply_for_cmd_<command name>` not exist there are no completion for options.
+If a function `_reply_for_cmd_<command name>` not exists there are no completion
+for options.
 
 * On the first option `_srvctl` call `_reply_for_cmd_<command name>`
 * On the next options `_srvctl` call `_next_reply_for_cmd`
 
 #### Function `_next_reply_for_cmd`
-If a function named `_next_reply_for_cmd_<command name>` exist, it's called. This
+If a function named `_next_reply_for_cmd_<command name>` exists, it's called. This
 function manage specifics case for a command.
 
-Else if a function like `_reply_with_<option_name>_list` exist it's called else
+Else if a function like `_reply_with_<option_name>_list` exists it's called else
 `_reply_for_cmd_<command name>` it's called.
 
 `_reply_with_<option_name>_list` provide a list of values for an options or nothing

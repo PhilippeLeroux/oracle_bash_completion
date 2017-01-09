@@ -286,7 +286,7 @@ function _remove_exclusive_options
 	typeset -A	exclusive_options
 	exclusive_options+=( [list_1]="-db -serverpool -thisversion -thishome" )
 	exclusive_options+=( [list_2]="-instance -node" )
-	exclusive_options+=( [list_3]="-netnum -scannumber" )
+	exclusive_options+=( [list_3]="-all -netnum -scannumber" )
 	exclusive_options+=( [list_4]="-service -startoption" )
 	exclusive_options+=( [list_5]="-listener -asmlistener -leaflistener" )
 	exclusive_options+=( [list_6]="-env -envs" ) # order is important.
@@ -319,7 +319,8 @@ function _remove_exclusive_options
 #		- remove options already in use.
 #		- remove incompatible options.
 #
-#	With only one option use _reply !
+#	Callback functions on command should use this function, not _reply. Else
+#	completion never stop.
 function _reply_with_options
 {
 	typeset	option_list="$@"
@@ -700,7 +701,7 @@ function _reply_for_cmd_status
 			;;
 
 		nodeapps)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		vip)
@@ -767,7 +768,7 @@ function _reply_for_cmd_status
 			;;
 
 		cvu)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		gns)
@@ -775,11 +776,11 @@ function _reply_for_cmd_status
 			;;
 
 		mgmtdb)
-			_reply "-verbose"
+			_reply_with_options "-verbose"
 			;;
 
 		mgmtlsnr)
-			_reply "-verbose"
+			_reply_with_options "-verbose"
 			;;
 
 		exportfs)
@@ -787,15 +788,15 @@ function _reply_for_cmd_status
 			;;
 
 		havip)
-			_reply "-id"
+			_reply_with_options "-id"
 			;;
 
 		mountfs)
-			_reply "-name"
+			_reply_with_options "-name"
 			;;
 
 		ons)
-			_reply "-verbose"
+			_reply_with_options "-verbose"
 			;;
 
 		*)
@@ -851,7 +852,7 @@ function _reply_for_cmd_start
 			then
 				_reply_with_options "-listener -force"
 			else
-				_reply "-listener"
+				_reply_with_options "-listener"
 			fi
 			;;
 
@@ -860,12 +861,12 @@ function _reply_for_cmd_start
 			then
 				_reply_with_options "-diskgroup -node"
 			else
-				_reply "-diskgroup"
+				_reply_with_options "-diskgroup"
 			fi
 			;;
 
 		ons) # standalone only
-			_reply "-verbose"
+			_reply_with_options "-verbose"
 			;;
 
 		home)
@@ -882,15 +883,15 @@ function _reply_for_cmd_start
 			;;
 
 		mgmtlsnr)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		rhpclient)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		cvu)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		filesystem)
@@ -902,7 +903,7 @@ function _reply_for_cmd_start
 			;;
 
 		rhpserver)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		vip)
@@ -1031,7 +1032,7 @@ function _reply_for_cmd_stop
 			;;
 
 		ons) # only on standalone.
-			_reply "-verbose"
+			_reply_with_options "-verbose"
 			;;
 
 		home)
@@ -1057,7 +1058,7 @@ function _reply_for_cmd_stop
 			;;
 
 		cvu)
-			_reply "-force"
+			_reply_with_options "-force"
 			;;
 
 		filesystem)
@@ -1167,7 +1168,7 @@ function _reply_for_cmd_config
 			then
 				_reply_with_options "-proxy -detail"
 			else
-				_reply "-all"
+				_reply_with_options "-all"
 			fi
 			;;
 
@@ -1176,7 +1177,7 @@ function _reply_for_cmd_config
 			then
 				_reply_with_options "-listener -asmlistener -leaflistener -all"
 			else
-				_reply "-listener"
+				_reply_with_options "-listener"
 			fi
 			;;
 
@@ -1189,11 +1190,11 @@ function _reply_for_cmd_config
 			;;
 
 		filesystem)
-			_reply "-device"
+			_reply_with_options "-device"
 			;;
 
 		mgmtlsnr)
-			_reply "-all"
+			_reply_with_options "-all"
 			;;
 
 		oc4j)
@@ -1216,7 +1217,7 @@ function _reply_for_cmd_config
 			;;
 
 		mountfs)
-			_reply "-name"
+			_reply_with_options "-name"
 			;;
 
 		rhpclient)
@@ -1224,7 +1225,7 @@ function _reply_for_cmd_config
 			;;
 
 		network)
-			_reply "-netnum"
+			_reply_with_options "-netnum"
 			;;
 
 		rhpserver)
@@ -1232,7 +1233,7 @@ function _reply_for_cmd_config
 			;;
 
 		srvpool)
-			_reply "-serverpool"
+			_reply_with_options "-serverpool"
 			;;
 
 		exportfs)
@@ -1271,7 +1272,7 @@ function _reply_for_cmd_enable
 			then
 				_reply_with_options "-db -node"
 			else
-				_reply "-db"
+				_reply_with_options "-db"
 			fi
 			;;
 
@@ -1328,15 +1329,15 @@ function _reply_for_cmd_enable
 			;;
 
 		rhpserver)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		rhpclient)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		filesystem)
-			_reply "-device"
+			_reply_with_options "-device"
 			;;
 
 		volume)
@@ -1357,19 +1358,19 @@ function _reply_for_cmd_enable
 			;;
 
 		cvu)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		mgmtdb)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		mgmtlsnr)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		exportfs)
-			_reply "-name"
+			_reply_with_options "-name"
 			;;
 
 		havip)
@@ -1381,7 +1382,7 @@ function _reply_for_cmd_enable
 			;;
 
 		ons)
-			_reply "-verbose"
+			_reply_with_options "-verbose"
 			;;
 
 		*)
@@ -1457,15 +1458,15 @@ function _reply_for_cmd_disable
 			;;
 
 		rhpserver)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		rhpclient)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		filesystem)
-			_reply "-device"
+			_reply_with_options "-device"
 			;;
 
 		volume)
@@ -1486,19 +1487,19 @@ function _reply_for_cmd_disable
 			;;
 
 		cvu)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		mgmtdb)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		mgmtlsnr)
-			_reply "-node"
+			_reply_with_options "-node"
 			;;
 
 		exportfs)
-			_reply "-name"
+			_reply_with_options "-name"
 			;;
 
 		havip)
@@ -1510,7 +1511,7 @@ function _reply_for_cmd_disable
 			;;
 
 		ons)
-			_reply "-verbose"
+			_reply_with_options "-verbose"
 			;;
 
 		*)
@@ -1541,15 +1542,15 @@ function _reply_for_cmd_getenv
 			;;
 
 		asm)
-			_reply "-envs"
+			_reply_with_options "-envs"
 			;;
 
 		mgmtdb)
-			_reply "-envs"
+			_reply_with_options "-envs"
 			;;
 
 		mgmtlsnr)
-			_reply "-envs"
+			_reply_with_options "-envs"
 			;;
 
 		*)
@@ -1620,15 +1621,15 @@ function _reply_for_cmd_unsetenv
 			;;
 
 		asm)
-			_reply "-envs"
+			_reply_with_options "-envs"
 			;;
 
 		mgmtdb)
-			_reply "-envs"
+			_reply_with_options "-envs"
 			;;
 
 		mgmtlsnr)
-			_reply "-envs"
+			_reply_with_options "-envs"
 			;;
 
 		*)
@@ -1739,7 +1740,7 @@ function _reply_for_cmd_add
 			;;
 
 		oc4j)
-			_reply "-verbose"
+			_reply_with_options "-verbose"
 			;;
 
 		rhpserver)
@@ -1770,11 +1771,11 @@ function _reply_for_cmd_add
 			;;
 
 		cvu)
-			_reply "-checkinterval"
+			_reply_with_options "-checkinterval"
 			;;
 
 		mgmtdb)
-			_reply "-domain"
+			_reply_with_options "-domain"
 			;;
 
 		mgmtlsnr)
