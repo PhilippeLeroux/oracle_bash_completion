@@ -47,14 +47,7 @@ function _log
 #	return 0 if $1 is a function, else return 1
 function _function_exists
 {
-	case "$(type -t "$1")" in
-		function|alias)
-			return 0
-			;;
-		*)
-			return 1
-			;;
-	esac
+	[ "$(type -t "$1")" == "function" ] && return 0 || return 1
 }
 
 #	return 0 if cluster, 1 if standalone server
