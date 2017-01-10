@@ -435,11 +435,11 @@ function _reply_with_instance_list
 		return 0
 	fi
 
-	if [ -v instance_list ]
-	then # TODO : invalidate cache on remove or add commands.
-		if [ $(( SECONDS - tt_instance_list )) -lt $(( 60 * 10 )) ]
+	if [ -v instance_list_cache ]
+	then
+		if [ $(( SECONDS - tt_instance_list_cache )) -lt $(( 60 * 10 )) ]
 		then
-			_reply "$instance_list"
+			_reply "$instance_list_cache"
 			return 0
 		fi
 		# cache to old.
@@ -449,10 +449,10 @@ function _reply_with_instance_list
 	cmd="$cmd | sed 's/Instance \(.*\) is.*/\1/g' | xargs"
 	_log "cmd='$cmd'"
 
-	typeset -g	instance_list="$(eval $cmd)"
-	typeset	-gi	tt_instance_list=$SECONDS
+	typeset -g	instance_list_cache="$(eval $cmd)"
+	typeset	-gi	tt_instance_list_cache=$SECONDS
 
-	_reply "$instance_list"
+	_reply "$instance_list_cache"
 }
 
 function _reply_with_startoption_list
@@ -543,23 +543,23 @@ function _reply_with_autostart_list
 
 function _reply_with_serverpool_list
 {
-	if [ -v pool_list ]
-	then # TODO : invalidate cache on remove or add commands.
-		if [ $(( SECONDS - tt_pool_list )) -lt $(( 60 * 10 )) ]
+	if [ -v serverpool_list_cache ]
+	then
+		if [ $(( SECONDS - tt_serverpool_list_cache )) -lt $(( 60 * 10 )) ]
 		then
-			_reply "$pool_list"
+			_reply "$serverpool_list_cache"
 			return 0
 		fi
 		# cache to old.
 	fi
 
-	typeset -g pool_list="$(srvctl status srvpool			|\
-								grep "^Server pool name:"	|\
-								awk '{ print $4 }'			|\
-								xargs)"
-	typeset	-gi	tt_pool_list=$SECONDS
+	typeset -g serverpool_list_cache="$(srvctl status srvpool			|\
+											grep "^Server pool name:"	|\
+											awk '{ print $4 }'			|\
+											xargs)"
+	typeset	-gi	tt_serverpool_list_cache=$SECONDS
 
-	_reply "$pool_list"
+	_reply "$serverpool_list_cache"
 }
 
 function _reply_with_policy_list
@@ -1831,6 +1831,108 @@ function _next_reply_for_cmd_add
 	then
 		_reply_for_cmd_add
 	fi
+}
+
+function _reply_for_cmd_remove
+{
+	case "$object_name" in
+		database)
+			_reply_with_options "-db -force -noprompt -verbose"
+			;;
+
+		instance)
+			_reply_with_options "-db -instance -force -noprompt"
+			;;
+
+		service)
+			_reply_with_options "-db -service -global_override -force"
+			;;
+
+		nodeapps)
+			_reply_with_options "-force -noprompt -verbose"
+			;;
+
+		vip)
+			_reply_with_options "-vip -force -noprompt -verbose"
+			;;
+
+		network)
+			_reply_with_options "-netnum -all -force -verbose"
+			;;
+
+		asm)
+			_reply_with_options "-proxy -force"
+			;;
+
+		listener)
+			_reply_with_options "-listener -all -force"
+			;;
+
+		scan)
+			_reply_with_options "-netnum -force -noprompt"
+			;;
+
+		scan_listener)
+			_reply_with_options "-netnum -force -noprompt"
+			;;
+
+		srvpool)
+			_reply_with_options "-serverpool -eval -verbose"
+			;;
+
+		oc4j)
+			_reply_with_options "-force -verbose"
+			;;
+
+		rhpserver)
+			_reply_with_options "-force"
+			;;
+
+		rhpclient)
+			_reply_with_options "-force"
+			;;
+
+		havip)
+			_reply_with_options "-id -force"
+			;;
+
+		exportfs)
+			_reply_with_options "-name -force"
+			;;
+
+		filesystem)
+			_reply_with_options "-device -force"
+			;;
+
+		diskgroup)
+			_reply_with_options "-diskgroup -force"
+			;;
+
+		gns)
+			_reply_with_options "-force -verbose"
+			;;
+
+		cvu)
+			_reply_with_options "-force"
+			;;
+
+		mgmtdb)
+			_reply_with_options "-force -noprompt -verbose"
+			;;
+
+		mgmtlsnr)
+			_reply_with_options "-force"
+			;;
+
+		mountfs)
+			_reply_with_options "-name -force"
+			;;
+
+		*)
+			_log "_reply_for_cmd_remove $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
 }
 
 #	End callback functions for commands.
