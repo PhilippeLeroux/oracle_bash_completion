@@ -638,16 +638,16 @@ function _reply_for_option
 	esac
 
 	typeset cb_name="_reply_with_${option:1}_list"
-	_log "_reply_for_option : $cb_name == $(type -t $cb_name)"
 	case "$(type -t "$cb_name")" in
 		function)
 				:
 			;;
 
 		alias)
-			_log -n "_reply_for_option : translate $cb_name to "
+			# if cb_name is an alias name the call don't work even with option
+			# shopt -s expand_aliases, work only when use the alias name directly.
+			_log "_reply_for_option : translate alias $cb_name"
 			cb_name=$(alias $cb_name |cut -d\' -f2)
-			_log "$cb_name"
 			;;
 
 		*)
@@ -657,8 +657,6 @@ function _reply_for_option
 	esac
 
 	_log "_reply_for_option call : $cb_name"
-	# if cb_name is an alias name the call don't work even with option
-	# shopt -s expand_aliases, work only when use the alias name directly.
 	$cb_name
 	return 0
 }
@@ -685,7 +683,6 @@ function _reply_for_cmd_status
 			;;
 
 		instance)
-			#	TODO : standalone CRS
 			_reply_with_options "-db -node -instance -force -verbose"
 			;;
 
@@ -747,7 +744,6 @@ function _reply_for_cmd_status
 			;;
 
 		volume)
-			#	TODO : standalone CRS
 			_reply_with_options "-volume -diskgroup -device -node -all"
 			;;
 
@@ -827,7 +823,7 @@ function _reply_for_cmd_start
 									-verbose"
 			else
 				_reply_with_options "-db -service -startoption -global_override
-									verbose"
+									-verbose"
 			fi
 			;;
 
