@@ -415,7 +415,7 @@ function _reply_with_service_list
 	then # return all services
 		_reply "$(crsctl stat res							|\
 						grep -E "ora.*.svc$"				|\
-						sed "s/NAME=ora\.\(.*\)\.svc/\1/g"	|\
+						sed "s/NAME=ora\..*\.\(.*\)\.svc/\1/g"	|\
 						xargs)"
 	else # return services for specified database.
 		typeset -r dbname=$(tr [:upper:] [:lower:]<<<"$dbname")
