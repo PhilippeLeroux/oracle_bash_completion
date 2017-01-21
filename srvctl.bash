@@ -50,11 +50,16 @@ function _function_exists
 	[ "$(type -t "$1")" == "function" ] && return 0 || return 1
 }
 
+#	print the number of nodes to stdout
+function _count_nodes
+{
+	wc -l<<<"$(olsnodes)"
+}
+
 #	return 0 if cluster, 1 if standalone server
 function _is_cluster
 {
-	[ ! -v count_nodes ] && typeset	-rgi count_nodes=$(wc -l<<<"$(olsnodes)") || true
-	[ $count_nodes -gt 1 ] && return 0 || return 1
+	test $(_count_nodes) -gt 1
 }
 
 #	print to stdout dbname or empty string if not found.
@@ -378,9 +383,7 @@ function _reply_with_vip_list
 
 function _reply_with_netnum_list
 {
-	typeset -i count_net=$(crsctl stat res|grep -E "\.network$"|wc -l)
-
-	_reply "{1..$count_net}"
+	_reply "{1..$(crsctl stat res|grep -E "\.network$"|wc -l)}"
 }
 
 function _reply_with_scannumber_list
@@ -390,9 +393,7 @@ function _reply_with_scannumber_list
 
 function _reply_with_node_number_list
 {
-	[ ! -v count_nodes ] && _is_cluster || true
-
-	_reply "{1..$count_nodes}"
+	_reply "{1..$(_count_nodes)}"
 }
 
 alias _reply_with_startconcurrency_list=_reply_with_node_number_list
@@ -413,8 +414,8 @@ function _reply_with_service_list
 	typeset	dbname=$(_get_dbname)
 	if [ x"$dbname" == x ]
 	then # return all services
-		_reply "$(crsctl stat res							|\
-						grep -E "ora.*.svc$"				|\
+		_reply "$(crsctl stat res								|\
+						grep -E "ora.*.svc$"					|\
 						sed "s/NAME=ora\..*\.\(.*\)\.svc/\1/g"	|\
 						xargs)"
 	else # return services for specified database.
@@ -1798,12 +1799,12 @@ function _next_reply_for_cmd_add
 
 	case "$prev_word" in
 		-db|-instance)
-			case "$object_name" in
-				database)
-					COMPREPLY=()
-					return 0
-					;;
-			esac
+			if [ $object_name == database ]
+			then
+				COMPREPLY=()
+				return 0
+			fi
+
 			;;
 
 		-service)
