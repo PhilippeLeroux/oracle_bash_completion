@@ -646,7 +646,7 @@ function _reply_for_option
 
 		alias)
 			# if cb_name is an alias name the call don't work even with option
-			# shopt -s expand_aliases, work only when use the alias name directly.
+			# shopt -s expand_aliases, work only when alias name called directly.
 			_log "_reply_for_option : translate alias $cb_name"
 			cb_name=$(alias $cb_name |cut -d\' -f2)
 			;;
@@ -1858,7 +1858,12 @@ function _reply_for_cmd_remove
 			;;
 
 		asm)
-			_reply_with_options "-proxy -force"
+			if _is_cluster
+			then
+				_reply_with_options "-proxy -force"
+			else
+				_reply_with_options "-force"
+			fi
 			;;
 
 		listener)
@@ -1923,6 +1928,10 @@ function _reply_for_cmd_remove
 
 		mountfs)
 			_reply_with_options "-name -force"
+			;;
+
+		ons)
+			_reply_with_options "-force -verbose"
 			;;
 
 		*)

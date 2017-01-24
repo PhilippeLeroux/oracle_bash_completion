@@ -15,7 +15,7 @@
 	* setenv : full completion.
 	* unsetenv : full completion.
 	* add : full completion.
-	* remove : RAC only.
+	* remove : full completion.
 
 	Options not supported for commands (todo) :
 	* modify
