@@ -408,6 +408,10 @@ alias _reply_with_preferred_list=_reply_with_node_list
 alias _reply_with_available_list=_reply_with_node_list
 alias _reply_with_servers_list=_reply_with_node_list
 alias _reply_with_server_list=_reply_with_node_list
+alias _reply_with_targetnode_list=_reply_with_node_list
+alias _reply_with_currentnode_list=_reply_with_node_list
+alias _reply_with_oldinst_list=_reply_with_node_list
+alias _reply_with_newinst_list=_reply_with_node_list
 
 function _reply_with_service_list
 {
@@ -1941,6 +1945,79 @@ function _reply_for_cmd_remove
 	esac
 }
 
+function _reply_for_cmd_relocate
+{
+	case "$object_name" in
+		database)
+			#	with -h option -eval not present but work.
+			_reply_with_options "-db -node -timeout -abort -revert -stopoption
+								-verbose -eval"
+			;;
+
+		service)
+			_reply_with_options "-db -service -oldinst -newinst -currentnode
+								-targetnode -pq -force -noreplay -eval -verbose"
+			;;
+
+		server)
+			_reply_with_options "-servers -serverpool -eval -force -verbose"
+			;;
+
+		vip)
+			_reply_with_options "-vip -node -force -verbose"
+			;;
+
+		scan)
+			_reply_with_options "-scannumber -netnum -node"
+			;;
+
+		scan_listener)
+			_reply_with_options "-scannumber -netnum -node"
+			;;
+
+		oc4j)
+			_reply_with_options "-node -verbose"
+			;;
+
+		rhpserver)
+			_reply_with_options "-node"
+			;;
+
+		rhpclient)
+			_reply_with_options "-node"
+			;;
+
+		gns)
+			_reply_with_options "-node -verbose"
+			;;
+
+		cvu)
+			_reply_with_options "-node"
+			;;
+
+		mgmtdb)
+			_reply_with_options "-node"
+			;;
+
+		filesystem)
+			_reply_with_options "-device -node -force -verbose"
+			;;
+
+		asm)
+			_reply_with_options "-currentnode -targetnode -force"
+			;;
+
+		havip)
+			_reply_with_options "-id -node -force"
+			;;
+
+		*)
+			_log "_reply_for_cmd_relocate $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
+}
+
 #	End callback functions for commands.
 #	============================================================================
 
@@ -1970,7 +2047,7 @@ function _srvctl_complete
 
 	typeset -r	command_list="enable disable start stop status add remove modify
 							update getenv setenv unsetenv config upgrade
-							downgrade"
+							downgrade relocate"
 
 	typeset	-r	prev_word="${COMP_WORDS[COMP_CWORD-1]}"
 	typeset -r	command=${COMP_WORDS[icommand]}
