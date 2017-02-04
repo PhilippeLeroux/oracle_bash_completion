@@ -1,7 +1,7 @@
 # bash completion support for srvctl 12cR1
 # vim: ts=4:sw=4:filetype=sh:cc=81
 
-# Copyright (C) 2016,2017 Philippe Leroux <philippe.lrx@gmail.com>
+# Copyright © 2016,2017 Philippe Leroux <philippe.lrx@gmail.com>
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -412,6 +412,7 @@ alias _reply_with_targetnode_list=_reply_with_node_list
 alias _reply_with_currentnode_list=_reply_with_node_list
 alias _reply_with_oldinst_list=_reply_with_node_list
 alias _reply_with_newinst_list=_reply_with_node_list
+alias _reply_with_homenode_list=_reply_with_node_list
 
 function _reply_with_service_list
 {
@@ -470,70 +471,77 @@ function _reply_with_stopoption_list
 	_reply "normal transactional immediate abort"
 }
 
-function _reply_empty
+#	user must provide a value.
+function _reply_wait_user_input
 {
 	COMPREPLY=()
 }
 
 #	For this options user must provide a value.
-alias _reply_with_statefile_list=_reply_empty
-alias _reply_with_volume_list=_reply_empty
-alias _reply_with_device_list=_reply_empty
-alias _reply_with_name_list=_reply_empty
-alias _reply_with_id_list=_reply_empty
-alias _reply_with_envs_list=_reply_empty
-alias _reply_with_env_list=_reply_empty
-alias _reply_with_failoverdelay_list=_reply_empty
-alias _reply_with_failoverretry_list=_reply_empty
-alias _reply_with_edition_list=_reply_empty
-alias _reply_with_pdb_list=_reply_empty
-alias _reply_with_maxlag_list=_reply_empty
-alias _reply_with_sql_translation_profile_list=_reply_empty
-alias _reply_with_retention_list=_reply_empty
-alias _reply_with_replay_init_time_list=_reply_empty
-alias _reply_with_pqservice_list=_reply_empty
-alias _reply_with_pqpool_list=_reply_empty
-alias _reply_with_gsmflags_list=_reply_empty
-alias _reply_with_address_list=_reply_empty
-alias _reply_with_subnet_list=_reply_empty
-alias _reply_with_nettype_list=_reply_empty
-alias _reply_with_pingtarget_list=_reply_empty
-alias _reply_with_pwfile_list=_reply_empty
-alias _reply_with_proxy_list=_reply_empty
-alias _reply_with_timeout_list=_reply_empty
-alias _reply_with_domain_list=_reply_empty
-alias _reply_with_spfile_list=_reply_empty
-alias _reply_with_dbname_list=_reply_empty
-alias _reply_with_acfspath_list=_reply_empty
-alias _reply_with_emport_list=_reply_empty
-alias _reply_with_onslocalport_list=_reply_empty
-alias _reply_with_onsremoteport_list=_reply_empty
-alias _reply_with_remoteservers_list=_reply_empty
-alias _reply_with_clientdata_list=_reply_empty
-alias _reply_with_count_list=_reply_empty
-alias _reply_with_endpoints_list=_reply_empty
-alias _reply_with_invitednodes_list=_reply_empty
-alias _reply_with_invitedsubnets_list=_reply_empty
-alias _reply_with_scanname_list=_reply_empty
-alias _reply_with_min_list=_reply_empty
-alias _reply_with_max_list=_reply_empty
-alias _reply_with_importance_list=_reply_empty
-alias _reply_with_category_list=_reply_empty
-alias _reply_with_storage_list=_reply_empty
-alias _reply_with_network_number_list=_reply_empty
-alias _reply_with_description_list=_reply_empty
-alias _reply_with_path_list=_reply_empty
-alias _reply_with_options_list=_reply_empty
-alias _reply_with_clients_list=_reply_empty
-alias _reply_with_user_list=_reply_empty
-alias _reply_with_fsoptions_list=_reply_empty
-alias _reply_with_appid_list=_reply_empty
-alias _reply_with_auxvolumes_list=_reply_empty
-alias _reply_with_checkinterval_list=_reply_empty
-alias _reply_with_exportserver_list=_reply_empty
-alias _reply_with_exportpath_list=_reply_empty
-alias _reply_with_mountoptions_list=_reply_empty
-alias _reply_with_dbtype_list=_reply_empty
+alias _reply_with_statefile_list=_reply_wait_user_input
+alias _reply_with_volume_list=_reply_wait_user_input
+alias _reply_with_device_list=_reply_wait_user_input
+alias _reply_with_name_list=_reply_wait_user_input
+alias _reply_with_id_list=_reply_wait_user_input
+alias _reply_with_envs_list=_reply_wait_user_input
+alias _reply_with_env_list=_reply_wait_user_input
+alias _reply_with_failoverdelay_list=_reply_wait_user_input
+alias _reply_with_failoverretry_list=_reply_wait_user_input
+alias _reply_with_edition_list=_reply_wait_user_input
+alias _reply_with_pdb_list=_reply_wait_user_input
+alias _reply_with_maxlag_list=_reply_wait_user_input
+alias _reply_with_sql_translation_profile_list=_reply_wait_user_input
+alias _reply_with_retention_list=_reply_wait_user_input
+alias _reply_with_replay_init_time_list=_reply_wait_user_input
+alias _reply_with_pqservice_list=_reply_wait_user_input
+alias _reply_with_pqpool_list=_reply_wait_user_input
+alias _reply_with_gsmflags_list=_reply_wait_user_input
+alias _reply_with_address_list=_reply_wait_user_input
+alias _reply_with_subnet_list=_reply_wait_user_input
+alias _reply_with_nettype_list=_reply_wait_user_input
+alias _reply_with_pingtarget_list=_reply_wait_user_input
+alias _reply_with_pwfile_list=_reply_wait_user_input
+alias _reply_with_proxy_list=_reply_wait_user_input
+alias _reply_with_timeout_list=_reply_wait_user_input
+alias _reply_with_domain_list=_reply_wait_user_input
+alias _reply_with_spfile_list=_reply_wait_user_input
+alias _reply_with_dbname_list=_reply_wait_user_input
+alias _reply_with_acfspath_list=_reply_wait_user_input
+alias _reply_with_emport_list=_reply_wait_user_input
+alias _reply_with_onslocalport_list=_reply_wait_user_input
+alias _reply_with_onsremoteport_list=_reply_wait_user_input
+alias _reply_with_remoteservers_list=_reply_wait_user_input
+alias _reply_with_clientdata_list=_reply_wait_user_input
+alias _reply_with_count_list=_reply_wait_user_input
+alias _reply_with_endpoints_list=_reply_wait_user_input
+alias _reply_with_invitednodes_list=_reply_wait_user_input
+alias _reply_with_invitedsubnets_list=_reply_wait_user_input
+alias _reply_with_scanname_list=_reply_wait_user_input
+alias _reply_with_min_list=_reply_wait_user_input
+alias _reply_with_max_list=_reply_wait_user_input
+alias _reply_with_importance_list=_reply_wait_user_input
+alias _reply_with_category_list=_reply_wait_user_input
+alias _reply_with_storage_list=_reply_wait_user_input
+alias _reply_with_network_number_list=_reply_wait_user_input
+alias _reply_with_description_list=_reply_wait_user_input
+alias _reply_with_path_list=_reply_wait_user_input
+alias _reply_with_options_list=_reply_wait_user_input
+alias _reply_with_clients_list=_reply_wait_user_input
+alias _reply_with_user_list=_reply_wait_user_input
+alias _reply_with_fsoptions_list=_reply_wait_user_input
+alias _reply_with_appid_list=_reply_wait_user_input
+alias _reply_with_auxvolumes_list=_reply_wait_user_input
+alias _reply_with_checkinterval_list=_reply_wait_user_input
+alias _reply_with_exportserver_list=_reply_wait_user_input
+alias _reply_with_exportpath_list=_reply_wait_user_input
+alias _reply_with_mountoptions_list=_reply_wait_user_input
+alias _reply_with_dbtype_list=_reply_wait_user_input
+alias _reply_with_rmiport_list=_reply_wait_user_input
+alias _reply_with_httpport_list=_reply_wait_user_input
+alias _reply_with_port_list=_reply_wait_user_input
+alias _reply_with_resolve_list=_reply_wait_user_input
+alias _reply_with_verify_list=_reply_wait_user_input
+alias _reply_with_parameter_list=_reply_wait_user_input
 
 function _reply_with_fstype_list
 {
@@ -568,32 +576,32 @@ function _reply_with_serverpool_list
 }
 
 function _reply_with_policy_list
-{	# add database -policy
+{
 	_reply "automatic manual norestart"
 }
 
 function _reply_with_role_list
-{	# add database -role
+{
 	_reply "primary physical_standby logical_standby snapshot_standby far_sync"
 }
 
 function _reply_with_failovertype_list
-{	# add service
+{
 	_reply "none session select transaction"
 }
 
 function _reply_with_failovermethod_list
-{	# add service
+{
 	_reply "none basic"
 }
 
 function _reply_with_clbgoal_list
-{	# add service
+{
 	_reply "short long"
 }
 
 function _reply_with_rlbgoal_list
-{	# add service
+{
 	_reply "service_time throughput none"
 }
 
@@ -608,7 +616,7 @@ alias _reply_with_commit_outcome_list=_reply_true_false
 alias _reply_with_dtp_list=_reply_true_false
 
 function _reply_with_session_state_list
-{	# add service
+{
 	_reply "static dynamic"
 }
 
@@ -620,6 +628,16 @@ function _reply_with_cardinality_list
 function _reply_with_tafpolicy_list
 {
 	_reply "none basic preconnect"
+}
+
+function _reply_for_iptype_list
+{
+	_reply "IPV4 IPV6 BOTH"
+}
+
+function _reply_with_loglevel_list
+{
+	_reply "{1..6}"
 }
 
 #	$1 option name, if not begin with a dash return 1.
@@ -800,7 +818,6 @@ function _reply_for_cmd_status
 	esac
 }
 
-#	reply for command start
 function _reply_for_cmd_start
 {
 	case "$object_name" in
@@ -943,9 +960,6 @@ function _reply_for_cmd_start
 	esac
 }
 
-#	Exceptions are :
-#		on mount reply read
-#		on -loglevel reply {1..6}
 function _next_reply_for_cmd_start
 {
 	if ! _reply_for_option $prev_word
@@ -955,17 +969,12 @@ function _next_reply_for_cmd_start
 				COMPREPLY=( only )
 				;;
 
-			-loglevel) # Callback ?
-				_reply "{1..6}"
-				;;
-
 			*)
 				_reply_for_cmd_start
 		esac
 	fi
 }
 
-#	reply for command stop
 function _reply_for_cmd_stop
 {
 	case "$object_name" in
@@ -1111,8 +1120,6 @@ function _reply_for_cmd_stop
 	esac
 }
 
-#	Exceptions are :
-#		on transactional for object instance|database reply local
 function _next_reply_for_cmd_stop
 {
 	if ! _reply_for_option $prev_word
@@ -1135,7 +1142,6 @@ function _next_reply_for_cmd_stop
 	fi
 }
 
-#	reply for command config
 function _reply_for_cmd_config
 {
 	case "$object_name" in
@@ -1257,7 +1263,6 @@ function _reply_for_cmd_config
 	esac
 }
 
-#	reply for command enable
 function _reply_for_cmd_enable
 {
 	case "$object_name" in
@@ -1386,7 +1391,6 @@ function _reply_for_cmd_enable
 	esac
 }
 
-#	reply for command disable
 function _reply_for_cmd_disable
 {
 	case "$object_name" in
@@ -1515,7 +1519,6 @@ function _reply_for_cmd_disable
 	esac
 }
 
-#	reply for command getenv
 function _reply_for_cmd_getenv
 {
 	case "$object_name" in
@@ -1554,7 +1557,6 @@ function _reply_for_cmd_getenv
 	esac
 }
 
-#	reply for command setenv
 function _reply_for_cmd_setenv
 {
 	# always put -env before -envs
@@ -1594,7 +1596,6 @@ function _reply_for_cmd_setenv
 	esac
 }
 
-#	reply for command unsetenv
 function _reply_for_cmd_unsetenv
 {
 	case "$object_name" in
@@ -1949,7 +1950,6 @@ function _reply_for_cmd_relocate
 {
 	case "$object_name" in
 		database)
-			#	with -h option -eval not present but work.
 			_reply_with_options "-db -node -timeout -abort -revert -stopoption
 								-verbose -eval"
 			;;
@@ -2013,6 +2013,122 @@ function _reply_for_cmd_relocate
 
 		*)
 			_log "_reply_for_cmd_relocate $object_name : todo"
+			COMPREPLY=()
+			;;
+	esac
+}
+
+function _reply_for_cmd_modify
+{
+	case "$object_name" in
+		database)
+			_reply_with_options "-db -dbname -instance -timeout -domain
+								-spfile -pwfile -role -startoption -stopoption
+								-startconcurrency -stopconcurrency -policy
+								-serverpool -node -pqpool -diskgroup
+								-nodiskgroup -acfspath -force -eval -verbose"
+
+			;;
+
+		instance)
+			_reply_with_options "-db -instance -node"
+			;;
+
+		service)
+			_reply_with_options "-db -service -serverpool -pqservice -pqpool
+								-cardinality -tafpolicy -role -policy
+								-failovertype -failovermethod -failoverdelay
+								-failoverretry -edition -pdb
+								-sql_translation_profile -clbgoal -rlbgoal
+								-dtp -notification -commit_outcome -retention
+								-replay_init_time -session_state -maxlag
+								-gsmflags -global_override -eval -verbose
+								-force"
+			;;
+
+		asm)
+			_reply_with_options "-listener -pwfile -count -force"
+			;;
+
+		nodeapps)
+			_reply_with_options "-node -address -subnet -nettype -emport
+								-onslocalport -onsremoteport -remoteservers
+								-skip -clientdata -pingtarget -verbose"
+			;;
+
+		listener)
+			_reply_with_options "-listener -oraclehome -endpoints -user -netnum"
+			;;
+
+		network)
+			_reply_with_options "-netnum -subnet -nettype -iptype -pingtarget
+								-verbose"
+			;;
+
+		scan)
+			_reply_with_options "-scanname -netnum"
+			;;
+
+		scan_listener)
+			_reply_with_options "-update -endpoints -netnum -invitednodes
+								-invitedsubnets"
+			;;
+
+		srvpool)
+			_reply_with_options "-serverpool -min -max -importance -servers
+								-category -eval -force -verbose"
+			;;
+
+		oc4j)
+			_reply_with_options "-rmiport -httpport -verbose -force"
+			;;
+
+		rhpserver)
+			_reply_with_options "-port -force"
+			;;
+
+		rhpclient)
+			_reply_with_options "-clientdata -port -diskgroup -storage"
+			;;
+
+		filesystem)
+			_reply_with_options "-device -user -path -node -serverpool
+								-fsoptions -description -autostart -force"
+			;;
+
+		gns)
+			_reply_with_options "-loglevel -resolve -verify -vip -parameter
+								-clientdata -skip -verbose"
+			;;
+
+		cvu)
+			_reply_with_options "-checkinterval"
+			;;
+
+		mgmtdb)
+			_reply_with_options "-pwfile -spfile"
+			;;
+
+		mgmtlsnr)
+			_reply_with_options "-endpoints"
+			;;
+
+		exportfs)
+			_reply_with_options "-name -path -options -clients"
+			;;
+
+		havip)
+			_reply_with_options "-id -address -netnum -description -skip
+								-homenode"
+			;;
+
+		mountfs)
+			_reply_with_options "-name -path -exportserver -exportpath
+								-mountoptions -user"
+			;;
+
+		*)
+			_log "_reply_for_cmd_modify $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac

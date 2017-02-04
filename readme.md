@@ -1,6 +1,6 @@
 ### bash completion support for Oracle 12cR1 commands
 
-* srvctl \<command\> \<object\> option1, option2, ...
+* srvctl \<command\> \<object\> option1 option2 ...
 
 	Completion work on all commands and on all objects for a command.
 
@@ -16,9 +16,10 @@
 	* unsetenv : full completion.
 	* add : full completion.
 	* remove : full completion.
+	* relocate : full completion.
+	* modify : RAC only.
 
 	Options not supported for commands (todo) :
-	* modify
 	* update
 	* upgrade
 	* downgrade
@@ -90,6 +91,7 @@ if user must provide a value.
 ### LICENCE
 
 Copyright © 2016,2017 Philippe Leroux
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
