@@ -1182,11 +1182,11 @@ function _reply_for_cmd_config
 			;;
 
 		cvu)
-			COMP_REPLY=()
+			COMPREPLY=()
 			;;
 
 		ons) # only standalone
-			COMP_REPLY=()
+			COMPREPLY=()
 			;;
 
 		filesystem)
