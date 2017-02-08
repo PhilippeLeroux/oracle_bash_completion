@@ -20,6 +20,10 @@
 	* modify : RAC only.
 
 	Options not supported for commands (todo) :
+	* convert
+	* export
+	* import
+	* predict
 	* update
 	* upgrade
 	* downgrade

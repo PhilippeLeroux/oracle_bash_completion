@@ -2161,9 +2161,17 @@ function _srvctl_complete
 	typeset	-ri	iobject=2
 	typeset	-ri	ifirstoption=3
 
-	typeset -r	command_list="enable disable start stop status add remove modify
-							update getenv setenv unsetenv config upgrade
-							downgrade relocate"
+	if _is_cluster
+	then
+		typeset -r	command_list="enable disable start stop status add remove
+								modify update getenv setenv unsetenv config
+								upgrade downgrade relocate predict export
+								import convert"
+	else
+		typeset -r	command_list="enable disable start stop status add remove
+								modify update getenv setenv unsetenv config
+								upgrade downgrade"
+	fi
 
 	typeset	-r	prev_word="${COMP_WORDS[COMP_CWORD-1]}"
 	typeset -r	command=${COMP_WORDS[icommand]}
