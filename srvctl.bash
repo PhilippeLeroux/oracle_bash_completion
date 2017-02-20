@@ -1,4 +1,4 @@
-# bash completion support for srvctl 12cR1
+# bash completion support for srvctl 12.1.0.2.0
 # vim: ts=4:sw=4:filetype=sh:cc=81
 
 # Copyright © 2016,2017 Philippe Leroux <philippe.lrx@gmail.com>
@@ -26,18 +26,17 @@
 #	Functions for debug
 
 #	Work only with : export SRVCTL_LOG=yes
-function _log
+function _srvctl_log
 {
 	if [ "$SRVCTL_LOG" == yes ]
 	then # One log per user.
+		typeset log_name=/tmp/srvctl_completion_${USER}.log
 		if [ "$1" == "-n" ]
 		then
-			typeset -r first_arg="-n"
-			shift
+			echo -n "${@:2}" >> $log_name
 		else
-			typeset -r first_arg
+			echo "$@" >> $log_name
 		fi
-		echo $first_arg "$@" >> /tmp/srvctl_completion_${USER}.log
 	fi
 }
 
@@ -175,7 +174,7 @@ function _build_object_list_cluster
 			typeset -g object_list="listener scan_listener database mgmtdb instance gns"
 			;;
 		*)
-			_log "$command not supported."
+			_srvctl_log "$command not supported."
 			typeset -g object_list=""
 	esac
 }
@@ -232,7 +231,7 @@ function _build_object_list_standalone
 			typeset -g object_list="database"
 			;;
 		*)
-			_log "$command not supported."
+			_srvctl_log "$command not supported."
 			typeset -g object_list=""
 	esac
 }
@@ -293,14 +292,14 @@ function _remove_exclusive_options
 
 	for id in ${!exclusive_options[@]}
 	do
-		typeset exlu_opts=${exclusive_options[$id]}
+		typeset exclu_opt_list=${exclusive_options[$id]}
 		typeset option
-		for option in $exlu_opts
+		for option in $exclu_opt_list
 		do
 			if [ "$option" != "$cur_word" ] && _option_is_used "$option"
 			then
 				typeset o2r	# option to removed.
-				for o2r in ${exlu_opts/$option/}
+				for o2r in ${exclu_opt_list/$option/}
 				do	# cannot use option $o2r with $option, remove it.
 					option_list=${option_list/$o2r/}
 				done
@@ -443,7 +442,7 @@ function _reply_with_instance_list
 
 	if [ -v instance_list_cache ]
 	then
-		if [ $(( SECONDS - tt_instance_list_cache )) -lt $(( 60 * 10 )) ]
+		if [ $(( SECONDS - tt_instance_list_cache )) -lt $(( 60 * 2 )) ]
 		then
 			_reply "$instance_list_cache"
 			return 0
@@ -453,7 +452,7 @@ function _reply_with_instance_list
 
 	typeset	cmd="srvctl status database -db $dbname"
 	cmd="$cmd | sed 's/Instance \(.*\) is.*/\1/g' | xargs"
-	_log "cmd='$cmd'"
+	_srvctl_log "cmd='$cmd'"
 
 	typeset -g	instance_list_cache="$(eval $cmd)"
 	typeset	-gi	tt_instance_list_cache=$SECONDS
@@ -558,7 +557,7 @@ function _reply_with_serverpool_list
 {
 	if [ -v serverpool_list_cache ]
 	then
-		if [ $(( SECONDS - tt_serverpool_list_cache )) -lt $(( 60 * 10 )) ]
+		if [ $(( SECONDS - tt_serverpool_list_cache )) -lt $(( 60 * 2 )) ]
 		then
 			_reply "$serverpool_list_cache"
 			return 0
@@ -669,17 +668,17 @@ function _reply_for_option
 		alias)
 			# if cb_name is an alias name the call don't work even with option
 			# shopt -s expand_aliases, work only when alias name called directly.
-			_log "_reply_for_option : translate alias $cb_name"
+			_srvctl_log "_reply_for_option : translate alias $cb_name"
 			cb_name=$(alias $cb_name |cut -d\' -f2)
 			;;
 
 		*)
-			_log "_reply_for_option : $option not found"
+			_srvctl_log "_reply_for_option : $option not found"
 			return 1
 			;;
 	esac
 
-	_log "_reply_for_option call : $cb_name"
+	_srvctl_log "_reply_for_option call : $cb_name"
 	$cb_name
 	return 0
 }
@@ -812,7 +811,7 @@ function _reply_for_cmd_status
 			;;
 
 		*)
-			_log "error object '$object_name' unknow."
+			_srvctl_log "error object '$object_name' unknow."
 			COMPREPLY=()
 			;;
 	esac
@@ -954,7 +953,7 @@ function _reply_for_cmd_start
 			;;
 
 		*)
-			_log "_reply_for_cmd_start $object_name : todo"
+			_srvctl_log "_reply_for_cmd_start $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
@@ -1114,7 +1113,7 @@ function _reply_for_cmd_stop
 			;;
 
 		*)
-			_log "_reply_for_cmd_stop $object_name : todo"
+			_srvctl_log "_reply_for_cmd_stop $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
@@ -1257,7 +1256,7 @@ function _reply_for_cmd_config
 			;;
 
 		*)
-			_log "_reply_for_cmd_config $object_name : todo"
+			_srvctl_log "_reply_for_cmd_config $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
@@ -1385,7 +1384,7 @@ function _reply_for_cmd_enable
 			;;
 
 		*)
-			_log "_reply_for_cmd_enable $object_name : todo"
+			_srvctl_log "_reply_for_cmd_enable $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
@@ -1513,7 +1512,7 @@ function _reply_for_cmd_disable
 			;;
 
 		*)
-			_log "_reply_for_cmd_disable $object_name : todo"
+			_srvctl_log "_reply_for_cmd_disable $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
@@ -1551,7 +1550,7 @@ function _reply_for_cmd_getenv
 			;;
 
 		*)
-			_log "_reply_for_cmd_getenv $object_name : todo"
+			_srvctl_log "_reply_for_cmd_getenv $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
@@ -1590,7 +1589,7 @@ function _reply_for_cmd_setenv
 			;;
 
 		*)
-			_log "_reply_for_cmd_setenv $object_name : todo"
+			_srvctl_log "_reply_for_cmd_setenv $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
@@ -1628,7 +1627,7 @@ function _reply_for_cmd_unsetenv
 			;;
 
 		*)
-			_log "_reply_for_cmd_unsetenv $object_name : todo"
+			_srvctl_log "_reply_for_cmd_unsetenv $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
@@ -1788,7 +1787,7 @@ function _reply_for_cmd_add
 			;;
 
 		*)
-			_log "_reply_for_cmd_add $object_name : todo"
+			_srvctl_log "_reply_for_cmd_add $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
@@ -1940,7 +1939,7 @@ function _reply_for_cmd_remove
 			;;
 
 		*)
-			_log "_reply_for_cmd_remove $object_name : todo"
+			_srvctl_log "_reply_for_cmd_remove $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
@@ -2012,7 +2011,7 @@ function _reply_for_cmd_relocate
 			;;
 
 		*)
-			_log "_reply_for_cmd_relocate $object_name : todo"
+			_srvctl_log "_reply_for_cmd_relocate $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
@@ -2022,12 +2021,20 @@ function _reply_for_cmd_modify
 {
 	case "$object_name" in
 		database)
-			_reply_with_options "-db -dbname -instance -timeout -domain
-								-spfile -pwfile -role -startoption -stopoption
-								-startconcurrency -stopconcurrency -policy
-								-serverpool -node -pqpool -diskgroup
-								-nodiskgroup -acfspath -force -eval -verbose"
-
+			if _is_cluster
+			then
+				_reply_with_options "-db -dbname -instance -timeout -domain
+									-spfile -pwfile -role -startoption
+									-stopoption -startconcurrency
+									-stopconcurrency -policy -serverpool -node
+									-pqpool -diskgroup -nodiskgroup -acfspath
+									-force -eval -verbose"
+			else
+				_reply_with_options "-db -dbname -instance -oraclehome -user
+									-domain -spfile -pwfile -role -startoption
+									-stopoption -policy -diskgroup -nodiskgroup
+									-force -verbose"
+			fi
 			;;
 
 		instance)
@@ -2035,19 +2042,35 @@ function _reply_for_cmd_modify
 			;;
 
 		service)
-			_reply_with_options "-db -service -serverpool -pqservice -pqpool
-								-cardinality -tafpolicy -role -policy
-								-failovertype -failovermethod -failoverdelay
-								-failoverretry -edition -pdb
-								-sql_translation_profile -clbgoal -rlbgoal
-								-dtp -notification -commit_outcome -retention
-								-replay_init_time -session_state -maxlag
-								-gsmflags -global_override -eval -verbose
-								-force"
+			if _is_cluster
+			then
+				_reply_with_options "-db -service -serverpool -pqservice -pqpool
+									-cardinality -tafpolicy -role -policy
+									-failovertype -failovermethod -failoverdelay
+									-failoverretry -edition -pdb
+									-sql_translation_profile -clbgoal -rlbgoal
+									-dtp -notification -commit_outcome
+									-retention -replay_init_time -session_state
+									-maxlag -gsmflags -global_override -eval
+									-verbose -force"
+			else
+				_reply_with_options "-db -service -role -policy -failovertype
+									-failovermethod -failoverdelay
+									-failoverretry -edition -pdb -clbgoal
+									-global_override -notification
+									-sql_translation_profile -commit_outcome
+									-retention -replay_init_time -session_state
+									-verbose"
+			fi
 			;;
 
 		asm)
-			_reply_with_options "-listener -pwfile -count -force"
+			if _is_cluster
+			then # help no specified -spfile and -diskstring : strange ?
+				_reply_with_options "-listener -pwfile -count -force"
+			else
+				_reply_with_options "-listener -spfile -pwfile -diskstring"
+			fi
 			;;
 
 		nodeapps)
@@ -2057,7 +2080,13 @@ function _reply_for_cmd_modify
 			;;
 
 		listener)
-			_reply_with_options "-listener -oraclehome -endpoints -user -netnum"
+			if _is_cluster
+			then
+				_reply_with_options "-listener -oraclehome -endpoints -user
+									-netnum"
+			else # Impossible de préciser un -netnum ????
+				_reply_with_options "-listener -oraclehome -endpoints"
+			fi
 			;;
 
 		network)
@@ -2127,8 +2156,13 @@ function _reply_for_cmd_modify
 								-mountoptions -user"
 			;;
 
+		ons)
+			_reply_with_options "-emport -onslocalport -onsremoteport
+								-remoteservers -verbose"
+			;;
+
 		*)
-			_log "_reply_for_cmd_modify $object_name : todo"
+			_srvctl_log "_reply_for_cmd_modify $object_name : todo"
 			COMPREPLY=()
 			;;
 	esac
@@ -2178,14 +2212,14 @@ function _srvctl_complete
 	typeset -r	object_name=${COMP_WORDS[iobject]}
 
 	#	srvctl <command> <object> firstoption ...
-	_log
-	_log "${COMP_WORDS[*]}"
-	_log "command       : $command"
-	_log "object        : $object_name"
-	_log "first option  : ${COMP_WORDS[ifirstoption]}"
-	_log "cur_word      : ${COMP_WORDS[COMP_CWORD]}"
-	_log "prev_word     : $prev_word"
-	_log "COMP_CWORD    : $COMP_CWORD"
+	_srvctl_log
+	_srvctl_log "${COMP_WORDS[*]}"
+	_srvctl_log "command       : $command"
+	_srvctl_log "object        : $object_name"
+	_srvctl_log "first option  : ${COMP_WORDS[ifirstoption]}"
+	_srvctl_log "cur_word      : ${COMP_WORDS[COMP_CWORD]}"
+	_srvctl_log "prev_word     : $prev_word"
+	_srvctl_log "COMP_CWORD    : $COMP_CWORD"
 
 	if [[ "$prev_word" == "srvctl" ]]
 	then # srvctl TAB
@@ -2199,18 +2233,18 @@ function _srvctl_complete
 		then # $command is implemented.
 			_reply_for_cmd_${command}
 		else
-			_log "TODO : command '$command' not supported."
+			_srvctl_log "TODO : command '$command' not supported."
 		fi
 	else # srvctl <command> <object> opt1 opt2 ... TAB
 		if _function_exists _reply_for_cmd_${command}
 		then # $command is implemented.
 			_next_reply_for_cmd
 		else
-			_log "TODO : command '$command' not supported."
+			_srvctl_log "TODO : command '$command' not supported."
 		fi
 	fi
 
-	_log "COMPREPLY : '${COMPREPLY[*]}'"
+	_srvctl_log "COMPREPLY : '${COMPREPLY[*]}'"
 }
 
 complete -F _srvctl_complete srvctl

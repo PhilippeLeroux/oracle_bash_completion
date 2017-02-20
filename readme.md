@@ -17,7 +17,7 @@
 	* add : full completion.
 	* remove : full completion.
 	* relocate : full completion.
-	* modify : RAC only.
+	* modify : full completion.
 
 	Options not supported for commands (todo) :
 	* convert
