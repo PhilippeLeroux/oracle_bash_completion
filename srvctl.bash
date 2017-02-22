@@ -284,7 +284,8 @@ function _remove_exclusive_options
 	exclusive_options+=( [list_1]="-db -serverpool -thisversion -thishome" )
 	exclusive_options+=( [list_2]="-instance -node" )
 	exclusive_options+=( [list_3]="-all -netnum -scannumber" )
-	exclusive_options+=( [list_4]="-service -startoption" )
+	#BUG -service and -startoption valid together, remove list_4.
+	#exclusive_options+=( [list_4]="-service -startoption" )
 	exclusive_options+=( [list_5]="-listener -asmlistener -leaflistener" )
 	exclusive_options+=( [list_6]="-env -envs" ) # order is important.
 
@@ -462,7 +463,13 @@ function _reply_with_instance_list
 
 function _reply_with_startoption_list
 {
-	_reply "open mount read"
+	case "${COMP_WORDS[COMP_CWORD]}" in
+		"'"*) # word is like ' or 'r or 're or 'rea or 'read
+			COMPREPLY=( "'read only'" )
+			;;
+		*)
+			_reply "open mount \'read"
+	esac
 }
 
 function _reply_with_stopoption_list
@@ -673,7 +680,7 @@ function _reply_for_option
 			;;
 
 		*)
-			_srvctl_log "_reply_for_option : $option not found"
+			_srvctl_log "_reply_for_option option $option not found"
 			return 1
 			;;
 	esac
@@ -957,21 +964,6 @@ function _reply_for_cmd_start
 			COMPREPLY=()
 			;;
 	esac
-}
-
-function _next_reply_for_cmd_start
-{
-	if ! _reply_for_option $prev_word
-	then
-		case "$prev_word" in
-			read)
-				COMPREPLY=( only )
-				;;
-
-			*)
-				_reply_for_cmd_start
-		esac
-	fi
 }
 
 function _reply_for_cmd_stop
