@@ -2,7 +2,9 @@
 
 * srvctl \<command\> \<object\> option1 option2 ...
 
-	Completion work on all commands and on all objects for a command.
+	12cR1 : Completion work on all commands and on all objects for a command.
+
+	12cR2 : todo
 
 	Options supported for commands :
 
