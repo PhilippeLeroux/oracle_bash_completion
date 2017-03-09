@@ -5,6 +5,7 @@
 	Completion work on all commands and on all objects for a command.
 
 	Options supported for commands :
+
 	command			|	12cR1				| 12cR2
 	----------------|:---------------------:|-----------
 	status			|	full completion		| todo
