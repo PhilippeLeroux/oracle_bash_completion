@@ -21,13 +21,13 @@
 	remove          |   full completion     | todo
 	relocate        |   full completion     | todo
 	modify          |   full completion     | todo
-	convert			|	todo				| todo
-	export			|	todo				| todo
-	import			|	todo				| todo
-	predict			|	todo				| todo
-	update			|	todo				| todo
-	upgrade			|	todo				| todo
-	downgrade		|	todo				| todo
+	convert			|	never				| todo
+	export			|	never				| todo
+	import			|	never				| todo
+	predict			|	never				| todo
+	update			|	never				| todo
+	upgrade			|	never				| todo
+	downgrade		|	never				| todo
 
 ### Installation
 Copy file `srvctl.bash` to `/etc/bash_completion.d`
