@@ -5,28 +5,28 @@
 	Completion work on all commands and on all objects for a command.
 
 	Options supported for commands :
-	* status : full completion.
-	* config : full completion.
-	* start : full completion.
-	* stop : full completion.
-	* enable : full completion.
-	* disable : full completion.
-	* getenv : full completion.
-	* setenv : full completion.
-	* unsetenv : full completion.
-	* add : full completion.
-	* remove : full completion.
-	* relocate : full completion.
-	* modify : full completion.
-
-	Options not supported for commands (todo) :
-	* convert
-	* export
-	* import
-	* predict
-	* update
-	* upgrade
-	* downgrade
+	command			|	12cR1				| 12cR2
+	----------------|:---------------------:|-----------
+	status			|	full completion		| todo
+	config			|	full completion		| todo
+	start			|	full completion		| todo
+	stop			|	full completion		| todo
+	enable			|	full completion		| todo
+	disable			|	full completion		| todo
+	getenv          |   full completion     | todo
+	setenv          |   full completion     | todo
+	unsetenv        |   full completion     | todo
+	add			    |   full completion     | todo
+	remove          |   full completion     | todo
+	relocate        |   full completion     | todo
+	modify          |   full completion     | todo
+	convert			|	todo				| todo
+	export			|	todo				| todo
+	import			|	todo				| todo
+	predict			|	todo				| todo
+	update			|	todo				| todo
+	upgrade			|	todo				| todo
+	downgrade		|	todo				| todo
 
 ### Installation
 Copy file `srvctl.bash` to `/etc/bash_completion.d`
