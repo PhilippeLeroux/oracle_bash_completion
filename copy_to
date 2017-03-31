@@ -72,10 +72,22 @@ function copy_helper_script
 					grid@$cfg_server_name:$script_name
 }
 
+typeset srvctl_script=undef
+
 for node in $( seq $max_nodes )
 do
 	cfg_load_node_info $db $node
-	copy srvctl.bash 
+	if [ "$srvctl_script" == undef ]
+	then
+		rel="$(ssh oracle@$cfg_server_name ". .bash_profile &&	\
+				\$ORACLE_HOME/OPatch/opatch lsinventory	|\
+				grep \"Oracle Database 12c\"			|\
+				awk '{ print \$4 }'						|\
+				cut -d. -f1-2")"
+		srvctl_script=srvctl_${rel}.bash
+	fi
+
+	copy $srvctl_script
 	if [ $all == yes ]
 	then
 		copy_helper_script callback_func_for_command.sh

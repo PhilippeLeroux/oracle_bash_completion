@@ -4,13 +4,13 @@
 
 	12cR1 : Completion work on all commands and on all objects for a command.
 
-	12cR2 : todo
+	12cR2 : Work in Progress...
 
 	Options supported for commands :
 
 	command			|	12cR1				| 12cR2
 	----------------|:---------------------:|-----------
-	status			|	full completion		| todo
+	status			|	full completion		| single
 	config			|	full completion		| todo
 	start			|	full completion		| todo
 	stop			|	full completion		| todo
@@ -32,13 +32,15 @@
 	downgrade		|	never				| todo
 
 ### Installation
-Copy file `srvctl.bash` to `/etc/bash_completion.d`
+Copy file `srvctl_12.1.bash` or `srvctl_12.2.bash` to `/etc/bash_completion.d`
 
 GRID_HOME & ORACLE_HOME must be in PATH.
 
-You can download file `srvctl.bash` with following command :
+You can download file `srvctl_12.1.bash` or `srvctl_12.2.bash` with following command :
 ```
-wget https://raw.githubusercontent.com/PhilippeLeroux/oracle_bash_completion/master/srvctl.bash
+wget https://raw.githubusercontent.com/PhilippeLeroux/oracle_bash_completion/master/srvctl_12.1.bash
+or
+wget https://raw.githubusercontent.com/PhilippeLeroux/oracle_bash_completion/master/srvctl_12.2.bash
 ```
 
 --------------------------------------------------------------------------------
