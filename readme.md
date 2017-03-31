@@ -8,6 +8,12 @@
 
 	Options supported for commands :
 
+	* full completion	: work for RAC and standalone servers.
+	* single			: work only for standalone servers.
+	* RAC				: work only for RAC servers.
+	* todo				: todo
+	* never				: not supported.
+
 	command			|	12cR1				| 12cR2
 	----------------|:---------------------:|-----------
 	status			|	full completion		| single
