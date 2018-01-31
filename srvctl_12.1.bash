@@ -824,6 +824,29 @@ function _reply_for_cmd_status
 	esac
 }
 
+function _next_reply_for_cmd_start
+{
+	if ! _reply_for_option $prev_word
+	then
+		typeset	-r l_cur_word=${COMP_WORDS[COMP_CWORD]}
+		case "$prev_word" in
+			open)
+				if [ "$prev_word" == open ]
+				then
+					if [[ "${l_cur_word:0:1}" == "'" ]]
+					then
+						COMPREPLY="read only"
+					else
+						_reply "\'read -verbose"
+					fi
+					return 0
+				fi
+				;;
+		esac
+		_reply_for_cmd_start
+	fi
+}
+
 function _reply_for_cmd_start
 {
 	case "$object_name" in
