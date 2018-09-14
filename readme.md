@@ -1,10 +1,12 @@
-### bash completion support for Oracle 12cR1 commands
+### bash completion support for srvctl, Oracle versions 12cR1, 12cR2 and 18c.
 
 * srvctl \<command\> \<object\> option1 option2 ...
 
 	12cR1 : Completion work on all commands and on all objects for a command.
 
 	12cR2 : Work in Progress...
+
+	18c   : same script for 12cR2.
 
 	Options supported for commands :
 
