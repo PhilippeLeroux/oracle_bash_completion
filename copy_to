@@ -78,10 +78,11 @@ do
 	if [ "$srvctl_script" == undef ]
 	then
 		rel="$(ssh oracle@$cfg_server_name ". .bash_profile &&	\
-				\$ORACLE_HOME/OPatch/opatch lsinventory	|\
-				grep \"Oracle Database 12c\"			|\
-				awk '{ print \$4 }'						|\
+				\$ORACLE_HOME/OPatch/opatch lsinventory			|\
+				grep \"Oracle Database [0-9][0-9].\"			|\
+				awk '{ print \$4 }'								|\
 				cut -d. -f1-2")"
+		[ $rel != 12.1 ] && rel=12.2 || true
 		srvctl_script=srvctl_${rel}.bash
 	fi
 
